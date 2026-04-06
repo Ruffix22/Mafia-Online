@@ -862,7 +862,3 @@ io.on('connection', socket => {
     });
 
 });
-
-http.listen(PORT, ()=>{
-    console.log(`Server działa na porcie ${PORT}`);
-});
