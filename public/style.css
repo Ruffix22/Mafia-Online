@@ -1,0 +1,1271 @@
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    overflow: auto;
+    background-color: #1a1a1a; 
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    transition: background-image 2s ease-in-out;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif; /* Połączyłem czcionkę tutaj */
+}
+
+/* Nowy kontener główny */
+.main-game-area {
+    display: none; 
+	flex-direction: column; /* 👈 Układa elementy jeden pod drugim */
+    align-items: flex-start;
+    padding: 20px;
+    gap: 20px;             /* Odstęp między listą graczy a czatem */
+	width: fit-content;      /* 👈 Kontener będzie tak szeroki jak najszerszy element (czat) */
+	min-height: auto;
+}
+
+/* 🔥 GŁÓWNY LAYOUT */
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* 🧍 PANEL GRACZY */
+.players {
+    width: 100%;	/* 👈 Ustal stałą szerokość dla obu sekcji */
+	max-width: 600px; /* Dopasuj do szerokości czatu */
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 12px;
+	box-sizing: border-box;
+}
+
+.player {
+	display: flex;
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(28,28,28,0.9) 0%, rgba(28,28,28,0.4) 100%);
+    display: flex;
+    justify-content: space-between; /* Nick z lewej, przyciski z prawej */
+    align-items: center;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.player:hover {
+    background: #2a2a2a;
+}
+
+.player.dead {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+/* 🎮 IKONY */
+.player span {
+    cursor: pointer;
+}
+
+.chat-tabs {
+    display: flex;
+    background: #111;
+	border-bottom: 2px solid #333;
+	padding: 5px;
+}
+
+.tab-btn {
+    border-radius: 8px 8px 0 0 !important;
+    margin-right: 5px;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-size: 12px;
+    flex: 1;
+    padding: 10px;
+    background: #1a1a1a;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.tab-btn.active {
+    background: #333;
+    color: #fff;
+}
+
+.chat-messages div {
+    max-width: 570px;        /* Nie pozwoli wiadomości wyjść poza czat */
+    white-space: normal;    /* Pozwala tekstowi przechodzić do nowej linii */
+	word-break: break-word;  /* Rozbija długie słowa, np. "aaaaaaaaaaaaaaaaaaaaa" */
+}
+
+/* ✍️ INPUT */
+.chat-input {
+    display: flex;
+	background: #111;
+	padding: 15px;
+    border-top: 1px solid #222;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px 20px !important;
+    border: 1px solid #444 !important;
+	border-radius: 20px !important;
+    background: #222 !important;
+    color: white;
+}
+
+.chat-input button {
+    padding: 10px;
+    background: #5c1cff;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+/* 🎴 PUBLIC / PRIVATE */
+.card.public {
+    border-left: 4px solid #00c853;
+}
+
+.card.private {
+    border-left: 4px solid #ff5252;
+}
+
+/* 👑 HOST BUTTONY */
+.player-buttons span {
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+/* 🔥 PRZYCISKI */
+button {
+    border-radius: 6px;
+}
+.role-host {
+    color: gold;
+    font-weight: bold;
+}
+
+.role-city {
+    color: #00c853;
+    font-weight: bold;
+}
+
+.role-mafia {
+    color: #ff5252;
+    font-weight: bold;
+}
+
+.role-none {
+    color: #888;
+}
+/* 🎮 PANEL HOSTA */
+.host-controls {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background: #111;
+    border-top: 2px solid #222;
+}
+
+/* 🔥 PRZYCISKI EMOJI */
+.host-controls button {
+    font-size: 32px;          /* 👈 wielkość emoji */
+    padding: 5px 8px;
+    border-radius: 10px;
+    border: none;
+    background: #1c1c1c;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* ✨ HOVER */
+.host-controls button:hover {
+    background: #333;
+    transform: scale(1.08);
+}
+
+/* 💥 AKTYWNE KLIKNIĘCIE */
+.host-controls button:active {
+    transform: scale(0.95);
+}
+
+/* 🌈 KOLORY (opcjonalne, ale polecam) */
+#start-game-btn { background: #2e7d32; }   /* zielony */
+#day-btn { background: #fbc02d; }          /* żółty */
+#night-btn { background: #283593; }        /* granat */
+#start-voting-btn { background: #6a1b9a; } /* fiolet */
+#end-voting-btn { background: #b71c1c; }   /* czerwony */
+#end-game-btn { background: #FFA500; }
+
+/* 💡 HOVER KOLOR */
+#start-game-btn:hover { background: #43a047; }
+#day-btn:hover { background: #fdd835; }
+#night-btn:hover { background: #3949ab; }
+#start-voting-btn:hover { background: #8e24aa; }
+#end-voting-btn:hover { background: #d32f2f; }
+#end-game-btn:hover { background: #FFA500; }
+
+/* 🎴 PANEL KART */
+#cards-panel {
+    display: flex !important;   /* Wymuszamy flexa */
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    width: 90%;                 /* Nie dajemy 100%, żeby nie dotykało krawędzi */
+    max-width: 1200px;          /* Ograniczamy szerokość na dużych ekranach */
+    margin: 20px auto;          /* Środkujemy kontener w poziomie */
+    padding: 8px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.4); 
+    border-radius: 15px;
+    min-height: 220px;          /* Rezerwujemy miejsce, żeby panel nie miał 0px wysokości */
+    z-index: 100;               /* Musi być nad tłem */
+    position: relative;
+}
+
+/* 🃏 KARTA */
+.card {
+    width: 120px;
+    height: 200px;
+    flex: 0 0 120px;           /* Stała szerokość, nie kurczą się */
+    border-radius: 10px;
+    background-size: cover;    /* Obrazek karty wypełnia cały obszar */
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+    cursor: pointer;
+	transform: scale(0.8);
+    transition: transform 0.3s ease, border-color 0.3s;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.card:hover {
+    transform: translateY(-15px) scale(1.05); /* Wysunięcie do góry */
+    border-color: #5c1cff;                   /* Fioletowa ramka przy najechaniu */
+    z-index: 10;
+}
+
+/* 📋 PANEL OPISU - Ten panel trzyma miejsce, żeby nic nie skakało */
+#card-info-panel {
+    min-height: 100px; 
+    display: none; /* <--- USUNIĘTO !important */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.4); 
+    border-radius: 10px;
+    margin-top: 15px;
+    padding: 15px;
+    z-index: 999;
+    position: relative;
+	pointer-events: none;
+    border: 1px solid rgba(92, 28, 255, 0.3);
+}
+
+/* Klasa neutralna - Lobby */
+body.phase-lobby {
+	background-image: url('images/background_lobby.png'); /* Twoja neutralna grafika */
+}
+
+/* --- EFEKTY NOCY --- */
+
+body.phase-night {
+    background-image: url('images/background_night.jpg');
+    /* Nakładamy mroczny, zimny filtr na całą grę */
+    filter: brightness(0.6) contrast(1.1) hue-rotate(190deg) saturate(0.8);
+    transition: filter 2s ease-in-out; /* Płynne zapadanie zmroku */
+}
+
+/* Winieta (mrok na rogach ekranu) - dodawana tylko w nocy */
+body.phase-night::after {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    /* Gradient od środka (przezroczysty) do boków (ciemny granat/czarny) */
+    background: radial-gradient(circle, rgba(0,0,0,0) 30%, rgba(0,0,20,0.8) 100%);
+    pointer-events: none; /* Pozwala klikać przyciski pod spodem */
+    z-index: 9999;
+}
+
+/* --- EFEKT ŚMIERCI (Grayscale) --- */
+
+/* Tę klasę będziemy dodawać w app.js tylko dla trupa */
+body.is-dead {
+    filter: grayscale(100%) brightness(0.6) !important;
+    transition: filter 3s ease-in-out;
+}
+
+/* Czerwony błysk w momencie zgonu */
+body.just-died {
+    animation: death-flash 1.5s forwards;
+}
+
+@keyframes death-flash {
+    0% { box-shadow: inset 0 0 150px rgba(255, 0, 0, 1); }
+    100% { box-shadow: inset 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+/* Tło dla Dnia */
+body.phase-day {
+	background-image: url('images/background_day.jpg');
+}
+
+/* Panele graczy, martwych, czaty */
+#alive-players, #dead-players, .chat-messages, #cards-panel {
+    background: rgba(0, 0, 0, 0.3); /* przezroczysta ciemna warstwa */
+    border-radius: 10px;           /* lekko zaokrąglone rogi */
+    padding: 10px;
+    color: #fff;                   /* tekst w jasnym kolorze */
+    overflow-y: auto;
+}
+
+/* Paski górne / przyciski */
+#top-bar, .tab-btn, #start-game-btn, #day-btn, #end-game-btn, #night-btn, #start-voting-btn, #end-voting-btn {
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    border-radius: 8px;
+}
+
+#top-bar {
+	display: none;
+}
+
+body.is-host #top-bar {
+	display: flex !important;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.modal-content {
+    background: linear-gradient(145deg, #222, #111);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid #5c1cff;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 0 30px rgba(92, 28, 255, 0.4);
+}
+
+.modal-content h3 { margin-top: 0; color: #5c1cff; }
+
+.modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.modal-buttons button {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+#modal-confirm-btn { background: #5c1cff; color: white; }
+#modal-cancel-btn { background: #444; color: white; }
+
+#modal-confirm-btn:hover { background: #7a47ff; transform: scale(1.05); }
+#modal-cancel-btn:hover { background: #666; }
+
+
+/* Nowoczesny pasek narzędzi Hosta */
+#coin-toss-container {
+    position: fixed;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 50px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(92, 28, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#coin-btn, #wheel-btn {
+    font-size: 45px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    user-select: none;
+    line-height: 1;
+}
+
+#coin-btn:hover, #wheel-btn:hover {
+    transform: scale(1.2);
+}
+
+#coin-btn:active, #wheel-btn:active {
+    transform: scale(0.9);
+}
+
+/* Animacja kręcenia monetą przy kliknięciu */
+.coin-spin {
+    animation: spin 0.6s infinite linear;
+}
+
+@keyframes spin {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(360deg); }
+}
+.coin-wrapper {
+    perspective: 1000px;
+    text-align: center;
+}
+
+.coin {
+    width: 150px;
+    height: 150px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 3s cubic-bezier(0.2, 1, 0.3, 1);
+    margin: 0 auto 30px;
+}
+
+.coin div {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    border: 5px solid gold;
+    box-sizing: border-box;
+}
+
+.coin-front {
+    background: radial-gradient(circle, #ffd700, #b8860b);
+    color: #443400;
+}
+
+.coin-back {
+    background: radial-gradient(circle, #c0c0c0, #444);
+    color: white;
+    transform: rotateY(180deg);
+}
+
+#coin-result-text {
+    font-size: 40px;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px black;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+/* Animacja wznoszenia monety */
+@keyframes toss {
+    0% { transform: translateY(0) rotateY(0); }
+    50% { transform: translateY(-200px) rotateY(1800deg); }
+    100% { transform: translateY(0) rotateY(var(--final-rotation)); }
+}
+
+.tossing {
+    animation: toss 3s forwards;
+}
+
+#wheel-pointer {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 40px;
+    color: #ff0000;
+    z-index: 10;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+/* --- NAPRAWA KOŁA FORTUNY --- */
+
+#wheel-overlay {
+    display: none; /* Domyślnie ukryte, JS to pokaże */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9); /* Bardzo ciemne tło */
+    justify-content: center;
+    align-items: center;
+    z-index: 10001; /* Musi być nad wszystkim innym */
+}
+
+.wheel-content {
+    position: relative;
+    background: #1a1a1a;
+    padding: 40px;
+    border-radius: 20px;
+    border: 3px solid #5c1cff;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(92, 28, 255, 0.5);
+}
+
+#wheel-canvas {
+    border-radius: 50%;
+    border: 10px solid #333;
+    background: #000;
+    /* To sprawia, że koło się kręci płynnie: */
+    transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
+}
+
+#wheel-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+#spin-wheel-btn {
+    background: #5c1cff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+#close-wheel-btn {
+    background: #444;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#wheel-winner-text {
+    margin-top: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    min-height: 30px;
+}
+
+/* --- NOWOCZESNE MENU KART DLA HOSTA --- */
+
+#card-menu {
+    display: grid; /* Układamy karty w kolumnach, a nie jedną pod drugą */
+    grid-template-columns: repeat(3, 1fr); /* 3 kolumny */
+    gap: 10px;
+    max-width: 800px;
+    max-height: 80vh; /* Menu nie wyjdzie poza ekran */
+    overflow-y: auto; /* Skrolowanie, jeśli kart jest za dużo */
+    background: #111 !important; /* Ciemne tło */
+    border: 2px solid #5c1cff !important;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+
+#card-menu button {
+    background: #222;
+    border: 1px solid #333;
+    padding: 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: bold;
+}
+
+#card-menu button:hover {
+    background: #5c1cff; /* Kolor fioletowy po najechaniu */
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(92, 28, 255, 0.3);
+}
+
+/* Tytuł menu (opcjonalnie, jeśli go dodasz) */
+#card-menu::before {
+    content: "PRZYZNAJ KARTĘ MOCY";
+    grid-column: span 3; /* Napis na całą szerokość */
+    color: #5c1cff;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+/* Styl dla aktywnej Trybuny Umarłych */
+.dead-talk-active {
+    background-color: rgba(40, 40, 40, 0.9) !important; /* Ciemniejsze, "grobowa" szarość */
+    border: 2px solid #555 !important;
+    transition: all 0.5s ease; /* Płynne przejście koloru */
+    position: relative;
+}
+
+/* Opcjonalnie: Delikatny efekt poświaty dla wiadomości podczas trybuny */
+.dead-talk-active .chat-messages div {
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.dead-talk-active::before {
+    content: '☠️';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 150px;
+    opacity: 0.05; /* Bardzo delikatna, ledwo widoczna czaszka */
+    pointer-events: none; /* Żeby nie przeszkadzała w klikaniu */
+}
+
+/* --- STYL DNIA --- */
+.phase-day-chat {
+    background-color: rgba(255, 250, 230, 0.05) !important; /* Bardzo delikatny żółty */
+    border: 1px solid rgba(255, 215, 0, 0.2) !important;
+    transition: all 0.8s ease;
+    position: relative;
+}
+
+.phase-day-chat::before {
+    content: '☀️';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 180px;
+    opacity: 0.1; /* Ledwo widoczne słońce */
+    pointer-events: none;
+}
+
+/* --- STYL NOCY --- */
+.phase-night-chat {
+    background-color: rgba(20, 25, 50, 0.6) !important; /* Granatowa noc */
+    border: 1px solid rgba(100, 150, 255, 0.2) !important;
+    transition: all 0.8s ease;
+    position: relative;
+}
+
+.phase-night-chat::before {
+    content: '🌙';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 180px;
+    opacity: 0.05; /* Delikatny księżyc */
+    pointer-events: none;
+}
+
+#card-description-box {
+    width: 100%;
+    min-height: 80px; /* Stała wysokość - dostosuj do najdłuższego opisu */
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px dashed #555;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    color: white !important;
+    font-size: 16px;
+	line-height: 1.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+#card-description-box strong {
+    color: #fff;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.placeholder-text {
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* --- JEDEN TIMER DO WSZYSTKIEGO --- */
+#top-timer {
+	display: none;
+    position: fixed;
+    /* Stan początkowy: Wielki na środku */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(2.2);
+    
+    background: rgba(0, 0, 0, 0.9);
+    padding: 30px 60px;
+    border-radius: 20px;
+    border: 3px solid #5c1cff;
+    z-index: 10000;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(92, 28, 255, 0.6);
+    color: #fff;
+    
+    /* To zapewnia płynność ruchu i zmiany wielkości */
+    transition: all 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Stan końcowy: Mały pasek na górze */
+#top-timer.move-to-top {
+    top: 10px;
+    transform: translate(-50%, 0) scale(1); /* Powrót do normalnej skali */
+    
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 20px;
+    border-radius: 30px;
+    border: 1px solid rgba(92, 28, 255, 0.3);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    font-size: 0.95rem;
+}
+
+/* Styl dla samych napisów wewnątrz timera */
+#timer-label {
+    color: #5c1cff;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-right: 8px;
+}
+
+#timer-value {
+    color: #f1c40f; /* Złoty kolor odliczania */
+    font-family: monospace;
+    font-size: 1.2em;
+}
+
+#skip-phase-btn {
+	width: auto !important;
+	min-width: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+    padding: 0 5px;
+    background: transparent; /* Przezroczyste tło */
+    border: none;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+#skip-phase-btn:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 5px #5c1cff); /* Delikatna poświata zamiast tła */
+}
+
+#skip-phase-btn:active {
+    transform: scale(0.95);
+}
+
+/* Styl, gdy przycisk jest zablokowany (po kliknięciu) */
+#skip-phase-btn.is-ready {
+    opacity: 0.4;
+    cursor: default;
+    filter: grayscale(100%)
+}
+
+#ready-counter {
+    font-size: 14px;
+    margin-left: 4px;
+    font-weight: bold;
+    color: #fff; /* Biały tekst, żeby był widoczny na ciemnym tle */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.skip-icon {
+    font-size: 25px;
+}
+
+/* Wspólny styl dla wszystkich ikon w pasku bocznym */
+#coin-toss-container div {
+    width: 40px;          /* Stała szerokość */
+    height: 40px;         /* Stała wysokość */
+    display: flex;        /* Centrowanie zawartości */
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;      /* Jednolita wielkość dla emoji */
+    cursor: pointer;
+    transition: transform 0.2s;
+    margin: 5px 0;        /* Odstępy pionowe między ikonami */
+}
+
+/* Efekt najechania dla wszystkich */
+#coin-toss-container div:hover {
+    transform: scale(1.1);
+}
+
+/* --- EKRAN LOGOWANIA / LOBBY --- */
+
+body.phase-lobby {
+	background-image: url('images/login_bg.png');
+	background-size: cover;          /* Grafika wypełnia cały ekran */
+    background-position: center;     /* Środkujemy grafikę */
+    background-attachment: fixed;    /* Tło się nie przewija */
+    background-repeat: no-repeat;
+    background-color: #000;
+}
+
+body.phase-lobby::before {
+	content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Przyciemnienie tła na 70% */
+    z-index: 1; /* Musi być pod panelem logowania, ale nad grafiką */
+}
+
+#login-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20000; /* Nad wszystkim innym */
+}
+
+.login-box {
+    background: rgba(20, 20, 20, 0.8) !important;
+	backdrop-filter: blur(10px);
+    padding: 40px;
+    border-radius: 15px;
+    border: 2px solid rgba(92, 28, 255, 0.5) !important;
+    box-shadow: 0 0 30px rgba(92, 28, 255, 0.3);
+    text-align: center;
+    width: 320px;
+    animation: fadeIn 0.8s ease-out;
+	position: relative; /* Żeby z-index działał poprawnie */
+    z-index: 2;
+}
+
+.login-box h1 {
+    margin: 0 0 10px 0;
+    letter-spacing: 4px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(92, 28, 255, 0.5);
+}
+
+.subtitle {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+#nickname-input {
+    width: 100%;
+    padding: 12px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 5px;
+    color: white;
+    font-size: 16px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#nickname-input:focus {
+    border-color: #5c1cff;
+}
+
+/* Checkbox dla Hosta */
+.host-selector {
+    margin-bottom: 25px;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #aaa;
+    font-size: 14px;
+    user-select: none;
+}
+
+.checkbox-container input {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+/* Przycisk Wejścia */
+#join-btn-new {
+    width: 100%;
+    padding: 12px;
+    background: #5c1cff;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+}
+
+#join-btn-new:hover {
+    background: #7a47ff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(92, 28, 255, 0.4);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- INTELIGENTNE UKRYWANIE INTERFEJSU --- */
+
+/* Dopóki body ma klasę .phase-lobby, ukrywamy interfejs gry */
+body.phase-lobby .main-game-area, 
+body.phase-lobby #coin-toss-container, 
+body.phase-lobby #top-timer,
+body.phase-lobby #inventory-center,
+body.phase-lobby #top-bar,
+body.phase-lobby #utility-tools {
+    display: none !important;
+}
+
+/* Pasek hosta: domyślnie ukryty, pojawia się tylko dla hosta POZA lobby */
+#top-bar {
+    display: none; 
+}
+
+body.is-host:not(.phase-lobby) #top-bar {
+    display: flex !important;
+}
+
+/* Pasek boczny ikon: domyślnie flex, ale blokowany przez regułę wyżej w lobby */
+#coin-toss-container {
+    display: flex; 
+}
+
+#inventory-center {
+    display: flex;
+    flex-direction: column; /* Karty na górze, opis pod nimi */
+    align-items: center;
+    width: 100%;
+    margin-top: 20px;
+}
+
+#game-summary-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95); /* Bardzo ciemne tło */
+    z-index: 1000;
+    display: none; /* Pokazywane przez JS */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.winner-announcement {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+}
+
+.player-summary-list {
+    list-style: none;
+    padding: 0;
+    width: 300px;
+}
+
+.player-summary-item {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+}
+
+.winner-crown {
+    color: gold;
+    margin-left: 5px;
+}
+
+.host-nav-btn {
+    background: transparent; /* Pełna przezroczystość na start */
+    border: none;             /* Usuwamy obramowanie, jeśli inne go nie mają */
+    cursor: pointer;
+    font-size: 20px;          /* Dopasuj wielkość do emoji pozostałych przycisków */
+    padding: 8px;
+    border-radius: 5px;
+    transition: background 0.3s ease, transform 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.host-nav-btn:hover {
+    background: rgba(231, 76, 60, 0.3); /* Lekka czerwona poświata przy najechaniu */
+    transform: scale(1.1);              /* Delikatne powiększenie jak przy reszcie */
+}
+
+.winner-selector-content {
+    background: #1a1a1a;
+    padding: 40px !important;
+    border: 2px solid #444;
+}
+
+.winner-btns-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.win-btn {
+    flex: 1;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.2s;
+}
+
+.win-btn:hover { transform: scale(1.05); }
+
+.win-btn.city { background: #27ae60; color: white; } /* Zielony dla Miasta */
+.win-btn.mafia { background: #c0392b; color: white; } /* Czerwony dla Mafii */
+
+.cancel-btn {
+    background: #444;
+    color: #ccc;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.cancel-btn:hover { background: #555; }
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 5px;
+    border-radius: 8px;
+    border-left: 4px solid #444; /* Domyślny pasek */
+}
+
+#misfire-btn {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#misfire-btn:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 5px #00ffcc);
+}
+/* Styl dla przycisku Trybunału, aby pasował do reszty paska */
+#end-tribunal-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    display: none; /* Domyślnie ukryty */
+    align-items: center;
+    justify-content: center;
+}
+
+#end-tribunal-btn:hover {
+    transform: scale(1.1);
+    background-color: #e74c3c !important; /* Jaśniejszy czerwony przy najechaniu */
+}
+
+.host-controls #end-tribunal-btn {
+    min-width: 60px; /* Zwiększamy nieco, by zmieścił się licznik */
+    padding: 0 10px;
+    height: 50px;
+    border-radius: 25px; /* Bardziej owalny kształt dla licznika */
+    background-color: #c0392b !important;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px; /* Nieco mniejszy font, by licznik wszedł */
+    font-weight: bold;
+    color: white;
+    border: 2px solid white;
+}
+
+/* --- POPRAWIONY I POSPRZĄTANY PANEL NARZĘDZI --- */
+#utility-tools {
+	display: none;
+    position: fixed;
+    bottom: 220px; /* Wysokość nad panelem opisu kart */
+    right: 30px;
+    display: flex;
+    flex-direction: row; 
+    gap: 15px;
+    z-index: 9999;
+}
+
+#utility-tools button {
+    width: 85px !important;  /* Zwiększona baza */
+    height: 85px !important;
+    background: #1a1a1a;
+    border: 3px solid #f1c40f;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+#utility-tools button:hover {
+    transform: scale(1.1);
+    border-color: #fff;
+}
+
+/* Ikona notatnika */
+#notebook-btn {
+    font-size: 40px !important;
+}
+
+/* Ikona skipu */
+#skip-phase-btn .skip-icon {
+    font-size: 30px !important;
+    line-height: 1;
+    display: block;
+}
+
+/* LICZNIK 0/0 - Teraz będzie ogromny i czytelny */
+#ready-counter {
+    display: block !important;
+    font-size: 15px !important;   /* Konkretny rozmiar */
+    font-weight: 900 !important;  /* Ultra gruby */
+    color: #f1c40f !important;
+    font-family: 'Arial Black', sans-serif !important;
+    margin-top: 2px;
+    text-shadow: 2px 2px 2px #000; /* Czarny obrys cyfr */
+    opacity: 1 !important;        /* Upewniamy się, że nie jest przezroczysty */
+}
+
+/* Styl po kliknięciu "Gotowy" */
+#skip-phase-btn.is-ready {
+    background: #27ae60 !important; /* Zmiana na zielony dla jasnego sygnału */
+    border-color: #2ecc71;
+    opacity: 1 !important; /* Przycisk nie znika, tylko zmienia kolor */
+}
+
+#skip-phase-btn.is-ready #ready-counter {
+    color: #fff !important;
+}
+
+#chat-container {
+    width: 600px;
+    height: 500px;
+    background: #1a1a1a;
+    border: 2px solid #444;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column; 
+    overflow: hidden;
+}
+
+.chat-messages {
+    display: none !important; 
+    flex: 1;
+    overflow-y: auto;
+    background: #000;
+    padding: 10px;
+    flex-direction: column;
+}
+
+.chat-messages.active {
+    display: flex !important;
+}
+
+.message {
+    display: block !important;
+    width: fit-content !important;
+    max-width: 85% !important;
+    margin-bottom: 8px !important;
+    padding: 8px 12px !important;
+    background: #222 !important;
+    border-radius: 8px !important;
+    clear: both;
+}
+
+.message.own-message {
+    margin-left: auto !important;
+    background: #004d99 !important;
+}
+
+.message-sender {
+    display: block;
+    font-weight: bold;
+    color: #00d4ff;
+    font-size: 0.85em;
+    margin-bottom: 2px;
+}
+
+/* Specyficzny wygląd dla wiadomości prywatnych */
+#chat-messages-private .message {
+    background: #4a148c !important; /* Ciemny fiolet */
+    border-left: 4px solid #ab47bc !important;
+    font-style: italic;
+}
+
+#chat-messages-private .message-sender {
+    color: #ea80fc !important;
+}
+
+/* style.css */
+#card-menu .cancel-btn {
+    grid-column: 1 / -1;    /* Zajmuje wszystkie dostępne kolumny (od 1 do ostatniej) */
+    justify-self: center;   /* Centruje przycisk wewnątrz tej szerokiej kolumny */
+    margin-top: 25px;       /* Wyraźny odstęp od ostatniego rzędu kart */
+    min-width: 180px;       /* Żeby nie był za mały przy krótkim napisie */
+    background: #e74c3c;    /* Zmieńmy na czerwony, żeby odróżniał się od kart mocy */
+    color: white;
+}
+
+#card-menu .cancel-btn:hover {
+    background: #c0392b;
+    transform: scale(1.05);
+}
+
+/* Celujemy w body, które ma JEDNOCZEŚNIE klasę fazy dnia I klasę śmierci */
+body.phase-day.is-dead {
+    /* Wymuszamy odbarwienie tła za pomocą silniejszego selektora */
+    filter: grayscale(100%) brightness(0.7) !important;
+}
