@@ -324,27 +324,76 @@ function showRoleReveal(role) {
     const overlay = document.getElementById('role-reveal-overlay');
     const textElement = document.getElementById('role-reveal-text');
     
-    // Ustawiamy kolor i treść zależnie od roli
-    if (role === 'Mafia') {
-        textElement.innerText = 'MAFIA';
-        textElement.style.color = '#ff4d4d'; // Czerwień
-    } else {
-        textElement.innerText = 'MIASTO';
-        textElement.style.color = '#2ecc71'; // Zieleń
+    // Tworzymy dużą kartę do prezentacji, jeśli nie istnieje
+    let cardImg = document.getElementById('role-reveal-card');
+    if (!cardImg) {
+        cardImg = document.createElement('div');
+        cardImg.id = 'role-reveal-card';
+        cardImg.style.width = '240px';
+        cardImg.style.height = '340px';
+        cardImg.style.marginTop = '20px';
+        cardImg.style.backgroundSize = 'cover';
+        cardImg.style.backgroundPosition = 'center';
+        cardImg.style.borderRadius = '15px';
+        cardImg.style.transition = 'all 0.8s ease-in-out'; // Płynne przejście
+        overlay.appendChild(cardImg);
     }
 
-    // Pokazujemy panel
+    // Konfiguracja pod rolę
+    const isMafia = role === 'Mafia';
+    const imgPath = isMafia ? 'images/mafia.png' : 'images/city.png';
+    const roleColor = isMafia ? '#e74c3c' : '#3498db';
+
+    textElement.innerText = `TWOJA ROLA: ${role.toUpperCase()}`;
+    textElement.style.color = roleColor;
+    cardImg.style.backgroundImage = `url('${imgPath}')`;
+    cardImg.style.border = `2px solid ${roleColor}`;
+    cardImg.style.boxShadow = `0 0 40px ${roleColor}66`;
+
+    // Start animacji (pojawienie się)
+    cardImg.style.transform = 'scale(0.5)';
+    cardImg.style.opacity = '0';
     overlay.style.display = 'flex';
     overlay.style.opacity = '1';
 
-    // Po 3 sekundach zaczynamy znikanie
     setTimeout(() => {
+        cardImg.style.transform = 'scale(1)';
+        cardImg.style.opacity = '1';
+    }, 100);
+
+    // --- KLUCZOWY MOMENT: PRZEJŚCIE DO MINIATURKI ---
+    setTimeout(() => {
+        // 1. Znajdujemy pozycję docelową mini-karty (nawet jeśli jest ukryta)
+        let miniCard = document.getElementById('mini-role-card');
+        if (!miniCard) {
+            miniCard = document.createElement('div');
+            miniCard.id = 'mini-role-card';
+            document.body.appendChild(miniCard);
+        }
+
+        // 2. Animujemy dużą kartę w stronę miejsca miniatury
+        const rect = miniCard.getBoundingClientRect();
+        cardImg.style.position = 'fixed';
+        cardImg.style.left = `${rect.left}px`;
+        cardImg.style.top = `${rect.top}px`;
+        cardImg.style.width = '120px';
+        cardImg.style.height = '170px';
+        cardImg.style.transform = 'scale(1)';
+        cardImg.style.opacity = '0'; // Powolne wygaszanie w locie
+
         overlay.style.opacity = '0';
-        // Całkowite usunięcie z widoku po zakończeniu animacji (0.8s)
+
         setTimeout(() => {
             overlay.style.display = 'none';
+            
+            // 3. Pokazujemy właściwą mini-kartę na stałe
+            miniCard.style.display = 'block';
+            miniCard.style.backgroundImage = `url('${imgPath}')`;
+            miniCard.style.borderColor = roleColor;
+            miniCard.style.boxShadow = `0 0 15px ${roleColor}44`;
         }, 800);
-    }, 3000);
+
+    }, 4000); // Czas pokazywania roli
 }
 
 //////////////////////////////////////////////////////
@@ -392,7 +441,7 @@ function renderPlayersWithVotes() {
 
         // --- LOGIKA ETYKIET RÓL ---
 		if (p.exposed) {
-			roleLabel = 'MAFIA 🔍)';
+			roleLabel = 'MAFIA 🔍';
             roleClass = 'role-mafia';
             roleEmoji = '🔴';
 		}
@@ -528,6 +577,7 @@ function renderPlayersWithVotes() {
                     <span onclick="showCardMenu('${p.id}')" style="${iconBaseStyle}" title="Daj kartę">🃏</span>
                     <span onclick="toggleMute('${p.id}')" style="${iconBaseStyle}" title="Wycisz">${mutedIcon}</span>
                     <span onclick="changeRole('${p.id}')" style="${iconBaseStyle}" title="Zmień rolę">🔄</span>
+					<span onclick="socket.emit('hostRevealRole', '${p.id}')" style="${iconBaseStyle}" title="Ujawnij rolę wszystkim">💡</span>
                 </div>
             `;
         }
@@ -1048,34 +1098,50 @@ if (misfireBtn) {
     };
 }
 
-//////////////////////////////////////////////////////
-// 🎴 PANEL KART - HOST I GRACZE
-//////////////////////////////////////////////////////
-function showCardMenu(targetId){
-    if(!isHost) return;
+function showCardMenu(targetId) {
+    if (!isHost) return;
 
     let menu = document.getElementById('card-menu');
-    if(menu) menu.remove();
+    if (menu) menu.remove();
 
     menu = document.createElement('div');
     menu.id = 'card-menu';
-    // Zachowujemy Twoje stylowanie menu
-    menu.style.position='fixed';
-    menu.style.top='50%';
-    menu.style.left='50%';
-    menu.style.transform='translate(-50%,-50%)';
-    menu.style.background='#1a1a1a'; // Zmieniłem na ciemny, żeby kolory czcionek były czytelne
-    menu.style.padding='20px';
-    menu.style.zIndex='9999';
-    menu.style.maxHeight='90vh';
-    menu.style.overflowY='auto';
-    menu.style.border='2px solid gold';
-    menu.style.borderRadius='10px';
+	
+    // Style pozycjonowania (muszą być tutaj, jeśli nie ma ich w CSS)
+    menu.style.position = 'fixed';
+    menu.style.top = '50%';
+    menu.style.left = '50%';
+    menu.style.transform = 'translate(-50%, -50%)';
+    menu.style.zIndex = '9999';
+    menu.style.display = 'flex';          // Zmieniamy na flex
+    menu.style.flexDirection = 'column';  // Napis góra, reszta dół
+    menu.style.alignItems = 'center';      // Centrujemy w pionie
+    menu.style.minWidth = '600px';        // Szerokość dopasowana do 3 kolumn kart
+    menu.style.background = '#1a1a1a';
+    menu.style.padding = '20px';
+    menu.style.border = '2px solid gold';
+    menu.style.borderRadius = '10px';
+
+    // --- 1. TYTUŁ (Na stałe w menu) ---
+    const title = document.createElement('div');
+    title.innerText = "PRZYZNAJ KARTĘ MOCY";
+    title.style.color = '#5c1cff';
+    title.style.fontWeight = 'bold';
+    title.style.fontSize = '22px';
+    title.style.letterSpacing = '2px';
+    title.style.marginBottom = '20px';
+    title.style.textAlign = 'center';
+    menu.appendChild(title);
+
+    // --- 2. DYNAMICZNY KONTENER (Tu trafiają przyciski) ---
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.width = '100%';
+    contentWrapper.style.display = 'flex'; 
+    menu.appendChild(contentWrapper);
 
     const cards = [
-        // Dodajemy targetRole: 'city' / 'mafia' / 'both'
         {id:'anarchist', name:'Anarchista', type: 'public', targetRole: 'both'},
-        {id:'doctor', name:'Lekarz', type: 'private', targetRole: 'both'},
+        {id:'doctor', name:'Lekarz', type: 'private', targetRole: 'city'},
         {id:'forced_sacrifice', name:'Wymuszona Ofiara', type: 'public', targetRole: 'both'},
         {id:'blood_legacy', name:'Dziedzictwo Krwi', type: 'public', targetRole: 'mafia'},
         {id:'kamikaze', name:'Kamikadze', type: 'public', targetRole: 'both'},
@@ -1086,14 +1152,17 @@ function showCardMenu(targetId){
         {id:'misfire', name:'Błędny Strzał', type: 'private', targetRole: 'city'},
         {id:'support', name:'Wsparcie', type: 'private', targetRole: 'city'},
         {id:'in_broad_daylight', name:'W Biały Dzień', type: 'public', targetRole: 'mafia'},
-		{id:'silent_sabotage', name:'Zmowa Milczenia', type: 'private', targetRole: 'mafia'},
+        {id:'silent_sabotage', name:'Zmowa Milczenia', type: 'private', targetRole: 'mafia'},
         {id:'tribunal_of_state', name:'Trybunał Stanu', type: 'public', targetRole: 'both'},
-        {id:'full_moon', name:'Pełnia Księżyca', type: 'public', targetRole: 'both'},
+        {id:'suspect_profile', name:'Profil Podejrzanego', type: 'public', targetRole: 'both'},
+        {id:'investigative_report', name:'Raport Śledczy', type: 'private', targetRole: 'city'},
+        {id:'madman', name:'Szaleniec', type: 'private', targetRole: 'both'},
+        {id:'full_moon', name:'Pełnia Księżyca', type: 'private', targetRole: 'both'},
         {id:'bodyguard', name:'Ochroniarz', type: 'public', targetRole: 'both'},
         {id:'don_decision', name:'Decyzja Dona', type: 'public', targetRole: 'both'},
         {id:'chosen_of_dead', name:'Wybraniec Umarłych', type: 'public', targetRole: 'both'},
         {id:'delayed_execution', name:'Oddalona Egzekucja', type: 'public', targetRole: 'both'},
-		{id:'purification', name:'Oczyszczenie', type: 'public', targetRole: 'city'},
+        {id:'purification', name:'Oczyszczenie', type: 'public', targetRole: 'city'},
         {id:'untouchable', name:'Nietykalny', type: 'private', targetRole: 'city'},
         {id:'miracle_worker', name:'Cudotwórca', type: 'public', targetRole: 'both'},
         {id:'sniper', name:'Snajper', type: 'public', targetRole: 'both'},
@@ -1109,67 +1178,140 @@ function showCardMenu(targetId){
         {id:'boss_mama', name:'Boss Mama', type: 'public', targetRole: 'both'}
     ];
 
-    cards.sort((a, b) => a.name.localeCompare(b.name));
+    // --- KROK 1: WYBÓR FRAKCJI ---
+    const showFactionPicker = () => {
+        contentWrapper.innerHTML = '';
+        contentWrapper.style.display = 'flex';
+        contentWrapper.style.flexDirection = 'column';
+        contentWrapper.style.alignItems = 'center';
+		contentWrapper.style.width = '100%';
 
-    cards.forEach(card=>{
-        const btn = document.createElement('button');
-        
-        // --- LOGIKA KROPEK ( targetRole ) ---
-        let dot = '🟡'; // Domyślnie dla wszystkich
-        if (card.targetRole === 'city') dot = '🟢';
-        if (card.targetRole === 'mafia') dot = '🔴';
+        const buttonsRow = document.createElement('div');
+        buttonsRow.style.display = 'flex';
+        buttonsRow.style.gap = '20px';
+		buttonsRow.style.justifyContent = 'center';
+		buttonsRow.style.width = '100%';
 
-        btn.innerHTML = `${dot} ${card.name}`;
-        btn.style.display = 'block';
-        btn.style.width = '100%';
-        btn.style.margin = '4px 0';
-        btn.style.padding = '8px';
-        btn.style.textAlign = 'left';
-        btn.style.background = '#222';
-        btn.style.border = '1px solid #444';
-        btn.style.cursor = 'pointer';
-        btn.style.fontWeight = 'bold';
+        const factions = [
+            { id: 'city', name: 'OBYWATEL', img: 'images/city.png', color: '#3498db' },
+            { id: 'mafia', name: 'MAFIA', img: 'images/mafia.png', color: '#e74c3c' }
+        ];
 
-        // --- LOGIKA CZCIONKI ( type ) ---
-        if (card.type === 'public') {
-            btn.style.color = '#2ecc71'; // Zielona czcionka (Jawna)
-        } else {
-            btn.style.color = '#e74c3c'; // Czerwona czcionka (Spotkanie)
-        }
+        factions.forEach(f => {
+            const fBtn = document.createElement('div');
+            fBtn.style.cursor = 'pointer';
+            fBtn.style.textAlign = 'center';
+            fBtn.style.transition = 'transform 0.3s ease, filter 0.3s ease';
+            fBtn.style.width = '200px';
 
-        btn.onclick=()=>{
-            socket.emit('giveCard',{
-                playerId: targetId,
-                cardId: card.id,
-                hostId: playerId
-            });
-            menu.remove();
-        };
+            fBtn.innerHTML = `
+                <div style="
+				    width: 100%; 
+                    height: 280px; 
+                    background-image: url('${f.img}'); 
+                    background-size: cover; 
+                    background-position: center; 
+                    border-radius: 15px; 
+                    border: 2px solid ${f.color}66;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+                    margin-bottom: 15px;
+				"></div>
+                <div style="
+				    font-weight: bold; 
+                    color: ${f.color}; 
+                    font-size: 22px; 
+                    letter-spacing: 2px;
+                    text-shadow: 0 0 10px ${f.color}aa;
+			    ">${f.name}</div>
+            `;
 
-        menu.appendChild(btn);
-    });
+            fBtn.onmouseover = () => {
+				fBtn.style.transform = 'scale(1.08) translateY(-10px)';
+                fBtn.querySelector('div').style.border = `2px solid ${f.color}`;
+                fBtn.querySelector('div').style.boxShadow = `0 15px 30px ${f.color}44`;
+			};
+			
+			fBtn.onmouseleave = () => {
+                fBtn.style.transform = 'scale(1) translateY(0)';
+                fBtn.querySelector('div').style.border = `2px solid ${f.color}66`;
+                fBtn.querySelector('div').style.boxShadow = '0 10px 20px rgba(0,0,0,0.5)';
+            };
+			
+			fBtn.onclick = () => renderCardList(f.id);
+            buttonsRow.appendChild(fBtn);
+        });
 
-    // Przycisk Anuluj (Twoja wersja)
-    const buttonWrapper = document.createElement('div');
-    buttonWrapper.style.width = '100%';
-    buttonWrapper.style.display = 'flex';
-    buttonWrapper.style.justifyContent = 'center';
-    buttonWrapper.style.marginTop = '20px';
-	buttonWrapper.style.gridColumn = "1 / -1";
+        contentWrapper.appendChild(buttonsRow);
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.innerHTML = '❌ Anuluj';
-    cancelBtn.style.padding = '10px 30px';
-    cancelBtn.style.cursor = 'pointer';
-    cancelBtn.style.fontWeight = 'bold';
-    cancelBtn.style.color = 'red';
-    cancelBtn.style.border = '2px solid red';
-    cancelBtn.style.borderRadius = '5px';
-    cancelBtn.style.background = '#fff';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.innerHTML = '❌ Anuluj';
+        cancelBtn.style.marginTop = '40px';
+        cancelBtn.style.padding = '10px 25px';
+        cancelBtn.style.color = '#fff';
+        cancelBtn.style.background = 'rgba(255, 0, 0, 0.2)';
+        cancelBtn.style.border = '1px solid red';
+        cancelBtn.style.borderRadius = '8px';
+        cancelBtn.style.cursor = 'pointer';
+        cancelBtn.style.transition = 'background 0.2s';
+		
+		cancelBtn.onmouseover = () => cancelBtn.style.background = 'rgba(255, 0, 0, 0.4)';
+        cancelBtn.onmouseleave = () => cancelBtn.style.background = 'rgba(255, 0, 0, 0.2)';
+    
     cancelBtn.onclick = () => menu.remove();
+		
+        contentWrapper.appendChild(cancelBtn);
+    };
 
-    buttonWrapper.appendChild(cancelBtn);
-    menu.appendChild(buttonWrapper);
+    // --- KROK 2: WYBÓR KARTY ---
+    const renderCardList = (selectedFaction) => {
+        contentWrapper.innerHTML = '';
+        // Ustawiamy grid na kontenerze zawartości
+        contentWrapper.style.display = 'grid';
+        contentWrapper.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        contentWrapper.style.gap = '10px';
+
+        const filteredCards = cards.filter(c => c.targetRole === selectedFaction || c.targetRole === 'both');
+        filteredCards.sort((a, b) => a.name.localeCompare(b.name));
+
+        filteredCards.forEach(card => {
+            const btn = document.createElement('button');
+            let dot = card.targetRole === 'city' ? '🟢' : (card.targetRole === 'mafia' ? '🔴' : '🟡');
+            btn.innerHTML = `${dot} ${card.name}`;
+            btn.style.color = (card.type === 'public') ? '#2ecc71' : '#e74c3c';
+            btn.style.padding = '10px';
+            btn.style.cursor = 'pointer';
+            btn.style.background = '#222';
+            btn.style.border = '1px solid #444';
+            btn.style.borderRadius = '5px';
+
+            btn.onclick = () => {
+                socket.emit('giveCard', { playerId: targetId, cardId: card.id, hostId: playerId });
+                menu.remove();
+            };
+            contentWrapper.appendChild(btn);
+        });
+
+        const navWrapper = document.createElement('div');
+        navWrapper.style.gridColumn = "1 / -1";
+        navWrapper.style.display = "flex";
+        navWrapper.style.justifyContent = "center";
+        navWrapper.style.gap = "10px";
+        navWrapper.style.marginTop = "20px";
+
+        const backBtn = document.createElement('button');
+        backBtn.innerHTML = '⬅️ Powrót';
+        backBtn.onclick = showFactionPicker;
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.innerHTML = '❌ Anuluj';
+        cancelBtn.onclick = () => menu.remove();
+
+        navWrapper.appendChild(backBtn);
+        navWrapper.appendChild(cancelBtn);
+        contentWrapper.appendChild(navWrapper);
+    };
+
+    showFactionPicker();
     document.body.appendChild(menu);
 }
 
@@ -1286,8 +1428,6 @@ socket.on('coinResult', (data) => {
 		}, 3000);
 	}, 3000);
 });
-
-// NA SAMYM DOLE PLIKU:
 
 socket.on('syncWheelSpin', (data) => {
     winnerText.innerText = "";

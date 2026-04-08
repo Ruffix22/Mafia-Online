@@ -584,6 +584,8 @@ body.is-host #top-bar {
     border-radius: 15px;
     padding: 20px;
     box-shadow: 0 0 40px rgba(0,0,0,0.8);
+	min-width: 500px;
+	align-items: center;
 }
 
 #card-menu button {
@@ -603,18 +605,6 @@ body.is-host #top-bar {
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(92, 28, 255, 0.3);
-}
-
-/* Tytuł menu (opcjonalnie, jeśli go dodasz) */
-#card-menu::before {
-    content: "PRZYZNAJ KARTĘ MOCY";
-    grid-column: span 3; /* Napis na całą szerokość */
-    color: #5c1cff;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 10px;
-    font-size: 18px;
-    letter-spacing: 2px;
 }
 
 /* Styl dla aktywnej Trybuny Umarłych */
@@ -1268,4 +1258,33 @@ body.is-host:not(.phase-lobby) #top-bar {
 body.phase-day.is-dead {
     /* Wymuszamy odbarwienie tła za pomocą silniejszego selektora */
     filter: grayscale(100%) brightness(0.7) !important;
+}
+
+#mini-role-card {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 120px;
+    height: 170px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    display: none; /* Ukryta na starcie */
+    z-index: 100;
+    transition: all 0.5s ease-in-out;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Opcjonalny napis nad mini-kartą */
+#mini-role-card::before {
+    content: "TWOJA ROLA";
+    position: absolute;
+    top: -20px;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 1px;
 }
