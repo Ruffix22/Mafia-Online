@@ -34,7 +34,7 @@ let tribunalVotes = {}; // { playerId: 'guilty' / 'innocent' }
 let readyPlayers = new Set();
 let cardsDatabase = [
     {id:'anarchist', name:'Anarchista', description:'Wykorzystaj tę kartę by rozpocząć losowanie osoby, która ma zostać natychmiast wyeliminowana z gry. Po losowaniu następuje faza nocy.', type:'public', roles:['Miasto','Mafia']},
-    {id:'doctor', name:'Lekarz', description:'Wskaż Gospodarzowi osobę, którą ochronisz przed wyrokiem Mafii w trakcie najbliższej nocy.', type:'private', roles:['Miasto','Mafia']},
+    {id:'doctor', name:'Lekarz', description:'Wskaż Gospodarzowi osobę, którą ochronisz przed wyrokiem Mafii w trakcie najbliższej nocy.', type:'private', roles:['Miasto']},
     {id:'tribunal_of_state', name:'Trybunał Stanu', description:'Wskaż osobę, która automatycznie trafia przed Sąd Żywych. Miasto decyduje większością głosów czy zostanie wyeliminowana.', type:'public', roles:['Miasto','Mafia']},
     {id:'forced_sacrifice', name:'Wymuszona Ofiara', description:'Wskaż osobę, która jest eliminowana z rozgrywki, ale może ona na swoje miejsce przywrócić innego, martwego gracza.', type:'public', roles:['Miasto','Mafia']},
     {id:'kamikaze', name:'Kamikadze', description:'Możesz wyeliminować dowolną osobę z gry, ale ty również zostajesz wyeliminowany.', type:'public', roles:['Miasto','Mafia']},
@@ -63,9 +63,13 @@ let cardsDatabase = [
     {id:'avenger', name:'Mściciel', description:'Jeżeli zostałeś wskazany do opuszczenia gry, wskazujesz osobę, która opuści ją zamiast Ciebie.', type:'public', roles:['Miasto','Mafia']},
 	{id:'silent_sabotage', name:'Zmowa Milczenia', description:'Wskaż Gospodarzowi gracza, który ma zostać uciszony następnego dnia. Nie może on rozmawiać ani głosować', type:'private', roles:['Mafia']},
     {id:'uncertain_info', name:'Niepewna Informacja', description:'Wskaż Gospodarzowi trzy podejrzane osoby a ten poinformuje Cię ilu Mafiozów jest wśród nich. Nie możesz się z nikim podzielić tą informacją.', type:'private', roles:['Miasto','Mafia']},
-	{id:'blood_legacy', name:'Dziedzictwo Krwi', description:'Po zagraniu tek karty zostajesz wyeliminowany z gry, lecz w Twoje miejsce zostaje powołany dodatkowy Mafiozo.', type:'public', roles:['Mafia']},
+	{id:'blood_legacy', name:'Dziedzictwo Krwi', description:'Po zagraniu tej karty zostajesz wyeliminowany z gry, lecz w Twoje miejsce zostaje powołany dodatkowy Mafiozo.', type:'public', roles:['Mafia']},
     {id:'fair_judge', name:'Sprawiedliwy Sędzia', description:'W trakcie najbliższego głosowania wyeliminowany może być tylko Mafiozo. Jeśli w głosowaniu zostanie wybrany Obywatel, nie zostanie usunięty z rozgrywki.', type:'public', roles:['Miasto','Mafia']},
     {id:'crown_witness', name:'Świadek Koronny', description:'Zyskujesz immunitet i nie możesz zostać wyeliminowany z gry podczas następnego głosowania.', type:'public', roles:['Miasto','Mafia']},
+	
+    {id:'suspect_profile', name:'Profil Podejrzanego', description:'Użyj tej karty, aby wszyscy poznali tożsamość wyeliminowanej w następnym głosowaniu osoby.', type:'public', roles:['Miasto','Mafia']},
+    {id:'investigative_report', name:'Raport Śledczy', description:'Użyj tej karty, aby odkryć pozostałą w grze ilość Mafiozów. Nie możesz podzielić się tą informacją z innymi.', type:'private', roles:['Miasto']},
+    {id:'madman', name:'Szaleniec', description:'Po użyciu tej karty jeśli zostaniesz wyeliminowany w trakcie głosowania, zamiast Ciebie odpada losowy gracz.', type:'private', roles:['Miasto','Mafia']},
 
     {id:'recruit', name:'Rekrut', description:'Dołączasz do grona Mafii i budzisz się z nimi w najbliższej fazie nocy. Zostajesz Mafią do końca gry.', type:'private', roles:['Miasto','Mafia']},
 	{id:'tribune', name: 'Trybuna Umarłych', description:'Użyj tej karty aby uciszyć żyjących i przenieść dalszą dyskusję z głosowaniem na ręce umarłych. Dziś to oni zdecydują kto odpada.', type: 'public', roles:['Miasto','Mafia']},
@@ -640,6 +644,24 @@ io.on('connection', socket => {
         if(player) player.alive=true;
         io.emit('updatePlayers', players.filter(p=>p && p.id && p.name));
     });
+	
+	socket.on('hostRevealRole', (targetId) => {
+        const host = players.find(p => p.id === socket.id && p.isHost);
+        if (!host) return;
+
+        const target = players.find(p => p.id === targetId);
+        if (target) {
+            if (target.role === 'Mafia') {
+                target.exposed = true;
+            } else if (target.role === 'Miasto') {
+                target.isPurified = true;
+            }
+
+            io.emit('systemMessage', `💡 Rola gracza ${target.name} została ujawniona!`);
+        
+            io.emit('updatePlayers', players);
+        }
+    });
 
     // 🔄 ZMIANA ROLI
     socket.on('changeRole', (targetId, hostId)=>{
@@ -836,6 +858,7 @@ io.on('connection', socket => {
         player.cards = player.cards.filter(c => c.id !== cardId);
         io.to(player.id).emit('updateCards', player.cards);
     });
+
 
 	// 🏁 ZAKOŃCZENIE GRY (Obsługa Hosta)
     socket.on('endGameRequest', (winner) => {
