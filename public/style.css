@@ -222,13 +222,14 @@ button {
     width: 90%;                 /* Nie dajemy 100%, żeby nie dotykało krawędzi */
     max-width: 1200px;          /* Ograniczamy szerokość na dużych ekranach */
     margin: 20px auto;          /* Środkujemy kontener w poziomie */
-    padding: 8px;
+    padding: 15px;
     box-sizing: border-box;
     background: rgba(0, 0, 0, 0.4); 
     border-radius: 15px;
     min-height: 220px;          /* Rezerwujemy miejsce, żeby panel nie miał 0px wysokości */
     z-index: 100;               /* Musi być nad tłem */
     position: relative;
+	overflow: visible !important;
 }
 
 /* 🃏 KARTA */
@@ -282,7 +283,7 @@ body.phase-lobby {
 body.phase-night {
     background-image: url('images/background_night.jpg');
     /* Nakładamy mroczny, zimny filtr na całą grę */
-    filter: brightness(0.6) contrast(1.1) hue-rotate(190deg) saturate(0.8);
+    filter: brightness(0.8);
     transition: filter 2s ease-in-out; /* Płynne zapadanie zmroku */
 }
 

@@ -19,6 +19,7 @@ let readyCount = 0;
 let amIReady = false;
 let roleShown = false;
 let spyingPlayerId = null;
+let firstLoverId = null;
 let confusionActive = false;
 
 // --- LOGIKA LOGOWANIA ---
@@ -431,158 +432,80 @@ function renderPlayersWithVotes() {
     playersCache.forEach(p => {
         const div = document.createElement('div');
         div.className = 'player' + (p.alive ? '' : ' dead');
-
-        // --- STYL BAZOWY (zdefiniowany na początku pętli, aby każdy miał dostęp) ---
         const iconBaseStyle = 'cursor:pointer; font-size: 1.3em; display: inline-block; transform: scale(1.2); margin: 0 2px; transition: transform 0.2s;';
 
-        let roleLabel = '';
-        let roleClass = '';
-        let roleEmoji = '';
-
-        // --- LOGIKA ETYKIET RÓL ---
-		if (p.exposed) {
-			roleLabel = 'MAFIA 🔍';
-            roleClass = 'role-mafia';
-            roleEmoji = '🔴';
-		}
-		else if (p.isPurified) {
-			roleLabel = 'MIASTO ✨';
-            roleClass = 'role-city';
-            roleEmoji = '🟢';
-		}
-        else if (p.isHost && p.id === playerId) {
-            roleLabel = 'HOST';
-            roleClass = 'role-host';
-            roleEmoji = '👑';
-        } else if (isHost) {
-            if (p.role === 'Mafia') {
-                roleLabel = 'MAFIA';
-                roleClass = 'role-mafia';
-                roleEmoji = '🔴';
-            } else if (p.role === 'Miasto') {
-                roleLabel = 'MIASTO';
-                roleClass = 'role-city';
-                roleEmoji = '🟢';
-            } else if (p.role === 'Gospodarz') {
-                roleLabel = 'HOST';
-                roleClass = 'role-host';
-                roleEmoji = '👑';
-            } else {
-                roleLabel = 'Brak roli';
-                roleClass = 'role-none';
-            }
+        let roleLabel = '', roleClass = '', roleEmoji = '';
+        const meLocal = playersCache.find(ptr => ptr.id === playerId);
+        const isMyLover = meLocal && meLocal.isInLove && p.id === meLocal.loverId;
+        
+        if (p.exposed) { roleLabel = 'MAFIA 🔍'; roleClass = 'role-mafia'; roleEmoji = '🔴'; }
+        else if (p.isPurified) { roleLabel = 'MIASTO ✨'; roleClass = 'role-city'; roleEmoji = '🟢'; }
+        else if (p.isHost && p.id === playerId) { roleLabel = 'HOST'; roleClass = 'role-host'; roleEmoji = '👑'; }
+        else if (isHost) {
+            if (p.role === 'Mafia') { roleLabel = 'MAFIA'; roleClass = 'role-mafia'; roleEmoji = '🔴'; }
+            else if (p.role === 'Miasto') { roleLabel = 'MIASTO'; roleClass = 'role-city'; roleEmoji = '🟢'; }
+            else if (p.role === 'Gospodarz') { roleLabel = 'HOST'; roleClass = 'role-host'; roleEmoji = '👑'; }
+            else { roleLabel = 'Brak roli'; roleClass = 'role-none'; }
         } else {
-            if (p.id === playerId) {
-                if (p.role === 'Mafia') {
-                    roleLabel = 'MAFIA';
-                    roleClass = 'role-mafia';
-                    roleEmoji = '🔴';
-                } else if (p.role === 'Miasto') {
-                    roleLabel = 'MIASTO';
-                    roleClass = 'role-city';
-                    roleEmoji = '🟢';
-                } else {
-                    roleLabel = 'Brak roli';
-                    roleClass = 'role-none';
-                }
-            } else if (p.isHost) {
-                roleLabel = 'HOST';
-                roleClass = 'role-host';
-                roleEmoji = '👑';
-            } else {
-                roleLabel = '';
-            }
+            if (p.id === playerId || isMyLover) {
+                if (p.role === 'Mafia') { roleLabel = isMyLover ? 'MAFIA (KOCHANEK)' : 'MAFIA'; roleClass = 'role-mafia'; roleEmoji = '🔴'; }
+                else if (p.role === 'Miasto') { roleLabel = isMyLover ? 'MIASTO (KOCHANEK)' : 'MIASTO'; roleClass = 'role-city'; roleEmoji = '🟢'; }
+                else { roleLabel = 'Brak roli'; roleClass = 'role-none'; }
+            } else if (p.isHost) { roleLabel = 'HOST'; roleClass = 'role-host'; roleEmoji = '👑'; }
+            else { roleLabel = ''; }
         }
 
-        // --- LICZENIE GŁOSÓW (UWZGLĘDNIA WAGĘ) ---
         const voteCounts = {};
         Object.entries(votes).forEach(([voterId, targetId]) => {
             const voter = playersCache.find(v => v.id === voterId);
             const weight = (voter && voter.doubleVote) ? 2 : 1;
             voteCounts[targetId] = (voteCounts[targetId] || 0) + weight;
         });
-
         let voteCount = voteCounts[p.id] ? ` 🗳️(${voteCounts[p.id]})` : '';
-        
-        // Budujemy podstawowy HTML (Nazwa + Rola)
-        div.innerHTML = `<span>${p.name} <span class="${roleClass}"> ${roleEmoji} ${roleLabel} </span> ${voteCount}</span>`;
 
-        // --- 🗳️ GŁOSOWANIE (Dla zwykłych graczy) ---
-        const amIMuted = mutedPlayers[playerId]; 
-
-        if (!isHost && p.alive && p.id !== playerId && !p.isHost) {
-            if (!amIMuted) {
-                const vBtn = document.createElement('span');
-                vBtn.innerHTML = ' 🗳️';
-                vBtn.style.marginLeft = '10px';
-                vBtn.style.cursor = 'pointer';
-                vBtn.title = "Oddaj głos";
-                vBtn.onclick = () => vote(p.id, p.name);
-                div.appendChild(vBtn);
-            } else {
-                const blockedBtn = document.createElement('span');
-                blockedBtn.innerHTML = ' 🚫';
-                blockedBtn.style.marginLeft = '10px';
-                blockedBtn.title = "Jesteś wyciszony!";
-                blockedBtn.style.cursor = 'not-allowed';
-                div.appendChild(blockedBtn);
+        let loveHeart = '';
+        if (p.isInLove) {
+            if (isHost || (meLocal && meLocal.isInLove && (p.id === meLocal.loverId || p.id === playerId))) {
+                loveHeart = ' <span style="color: #ff69b4; text-shadow: 0 0 5px #ff69b4;">🩷</span>';
             }
         }
+		
+		let statusIcons = '';
+        if (p.protected) statusIcons += ' <span title="Chroniony">🛡️</span>';
+        if (p.doubleVote) statusIcons += ' <span title="Podwójny głos">⚖️</span>';
+        if (p.isMuted) statusIcons += ' <span title="Wyciszony">🔇</span>';
+		if (p.canGhostTalk) statusIcons += ' ✨';
+        if (p.isGodfather) statusIcons += ' <span title="Ojciec Chrzestny">🎩</span>';
 
-        // --- 🎯 CEL MAFII ---
-        const me = playersCache.find(ptr => ptr.id === playerId);
-        if (me && me.role === 'Mafia' && me.alive && currentPhase === 'Noc') {
-            if (p.alive && p.id !== playerId && !p.isHost) {
-                const targetBtn = document.createElement('span');
-                targetBtn.innerHTML = ' 🎯';
-                targetBtn.style.cursor = 'pointer';
-                targetBtn.style.marginLeft = '10px';
-                targetBtn.onclick = () => socket.emit('mafiaVote', p.id);
-                div.appendChild(targetBtn);
-            }
+        div.innerHTML = `<span>${p.name}${loveHeart}${statusIcons} <span class="${roleClass}"> ${roleEmoji} ${roleLabel} </span> ${voteCount}</span>`;
+
+        if (!isHost && p.alive && p.id !== playerId && !p.isHost && !(meLocal && meLocal.isMuted)) {
+            const vBtn = document.createElement('span');
+            vBtn.innerHTML = ' 🗳️'; vBtn.style.marginLeft = '10px'; vBtn.style.cursor = 'pointer';
+            vBtn.onclick = () => vote(p.id, p.name);
+            div.appendChild(vBtn);
         }
 
-        // --- 👑 PANEL HOSTA (PRZYCISKI PRZY NICKACH) ---
         if (isHost && !p.isHost) {
-            const mutedIcon = mutedPlayers[p.id] ? '🔇' : '🎤';
-            
-            // Definicje stylów dla stanów aktywnych
-            const eyeStyle = (spyingPlayerId === p.id)
-                ? `${iconBaseStyle} color: #ff4d4d; filter: drop-shadow(0 0 5px red);` 
-                : `${iconBaseStyle} opacity: 0.8;`;
-
-            const protectStyle = p.protected
-                ? `${iconBaseStyle} color: #fff; filter: drop-shadow(0 0 8px #00d4ff);`
-                : `${iconBaseStyle} opacity: 0.5;`;
-
-            const vStyle = p.doubleVote 
-                ? `${iconBaseStyle} color: gold; filter: drop-shadow(0 0 8px yellow); opacity: 1;` 
-                : `${iconBaseStyle} opacity: 0.5;`;
-
-            const cStyle = confusionActive 
-                ? `${iconBaseStyle} color: #00ffcc; filter: drop-shadow(0 0 8px #00ffcc); opacity: 1;` 
-                : `${iconBaseStyle} opacity: 0.5;`;
-
-            let lifeActionIcon = p.alive 
-                ? `<span onclick="toggleAlive('${p.id}')" title="Zabij" style="${iconBaseStyle}">💀</span>`
-                : `<span onclick="revive('${p.id}')" title="Wskrześ" style="${iconBaseStyle}">😇</span>`;
+            const mutedIcon = p.isMuted ? '🔇' : '🎤';
+            const eyeStyle = (spyingPlayerId === p.id) ? `${iconBaseStyle} color: #ff4d4d; filter: drop-shadow(0 0 5px red);` : `${iconBaseStyle} opacity: 0.8;`;
+            const protectStyle = p.protected ? `${iconBaseStyle} color: #fff; filter: drop-shadow(0 0 8px #00d4ff);` : `${iconBaseStyle} opacity: 0.5;`;
+            const vStyle = p.doubleVote ? `${iconBaseStyle} color: gold; filter: drop-shadow(0 0 8px yellow); opacity: 1;` : `${iconBaseStyle} opacity: 0.5;`;
+            const seanceStyle = p.canGhostTalk ? `${iconBaseStyle} color: #9b59b6; filter: drop-shadow(0 0 8px #9b59b6); opacity: 1;` : `${iconBaseStyle} opacity: 0.5;`;
+            const godfatherStyle = (p.id === godfatherId) ? `${iconBaseStyle} color: #fff; filter: drop-shadow(0 0 8px #000); transform: scale(1.5);` : `${iconBaseStyle} opacity: 0.5;`;
+            const loveStyle = p.isInLove ? `${iconBaseStyle} color: #ff69b4; filter: drop-shadow(0 0 8px #ff69b4); opacity: 1;` : (firstLoverId === p.id ? `${iconBaseStyle} color: #ff69b4; opacity: 0.6; transform: scale(1.4);` : `${iconBaseStyle} opacity: 0.5;`);
 
             div.innerHTML += `
-                <div class="player-buttons" style="display: flex; align-items: center; gap: 10px; margin-left: 20px;">
-                    ${lifeActionIcon}
-                    <span onclick="toggleProtect('${p.id}')" style="${protectStyle}" title="Tarcza">🛡️</span>
-                    <span onclick="handleEyeClick('${p.id}')" style="${eyeStyle}" title="Podgląd kart">👁️</span>
-                    <span onclick="socket.emit('toggleDoubleVote', '${p.id}')" style="${vStyle}" title="Podwójny głos">⚖️</span>
-					<span onclick="triggerTribunal('${p.id}')" style="cursor:pointer; margin-left:5px;" title="Trybunał Stanu">📯</span>
-                    <span onclick="showCardMenu('${p.id}')" style="${iconBaseStyle}" title="Daj kartę">🃏</span>
-                    <span onclick="toggleMute('${p.id}')" style="${iconBaseStyle}" title="Wycisz">${mutedIcon}</span>
-                    <span onclick="changeRole('${p.id}')" style="${iconBaseStyle}" title="Zmień rolę">🔄</span>
-					<span onclick="socket.emit('hostRevealRole', '${p.id}')" style="${iconBaseStyle}" title="Ujawnij rolę wszystkim">💡</span>
-                </div>
-            `;
+			    <div class="player-buttons" style="display: flex; align-items: center; margin-left: 20px;">
+				    <span onclick="openHostPanel('${p.id}')" style="cursor:pointer; font-size: 1.5em;" title="Zarządzaj graczem">⚙️</span>
+				</div>`;
+
+            setTimeout(() => {
+                const lBtn = document.getElementById(`love-btn-${p.id}`);
+                if (lBtn) lBtn.onclick = () => handleLoveClick(p.id);
+            }, 0);
         }
 
-        // --- DODANIE DO ODPOWIEDNIEJ LISTY ---
         if (p.alive) aliveDiv.appendChild(div);
         else deadDiv.appendChild(div);
     });
@@ -612,6 +535,9 @@ function handleEyeClick(targetId) {
 //////////////////////////////////////////////////////
 socket.on('updatePlayers', players => {
     playersCache = players;
+	
+	const gf = players.find(p => p.isGodfather);
+	godfatherId = gf ? gf.id : null;
 
     // Znajdź "mnie" na liście serwerowej
     const me = players.find(p => p.id === socket.id);
@@ -938,6 +864,12 @@ function sendMessage() {
     
     const text = msgInput.value.trim();
     if (text === "") return;
+	
+	const me = playersCache.find(ptr => ptr.id === playerId);
+	if (me && !me.alive && !me.canGhostTalk) {
+		appendMessageToChat('System', 'Nie żyjesz - nie możesz pisać na czacie miasta!', 'system');
+        return;
+	}
 
     const activeTabBtn = document.querySelector('.tab-btn.active');
     const chatType = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'city';
@@ -1157,9 +1089,11 @@ function showCardMenu(targetId) {
         {id:'suspect_profile', name:'Profil Podejrzanego', type: 'public', targetRole: 'both'},
         {id:'investigative_report', name:'Raport Śledczy', type: 'private', targetRole: 'city'},
         {id:'madman', name:'Szaleniec', type: 'private', targetRole: 'both'},
+        {id:'lovers', name:'Anioł Miłości', type: 'private', targetRole: 'both'},
         {id:'full_moon', name:'Pełnia Księżyca', type: 'private', targetRole: 'both'},
         {id:'bodyguard', name:'Ochroniarz', type: 'public', targetRole: 'both'},
         {id:'don_decision', name:'Decyzja Dona', type: 'public', targetRole: 'both'},
+		{id:'spiritual_seance', name:'Seans Spirytystyczny', type: 'public', targetRole: 'both'},
         {id:'chosen_of_dead', name:'Wybraniec Umarłych', type: 'public', targetRole: 'both'},
         {id:'delayed_execution', name:'Oddalona Egzekucja', type: 'public', targetRole: 'both'},
         {id:'purification', name:'Oczyszczenie', type: 'public', targetRole: 'city'},
@@ -1175,7 +1109,16 @@ function showCardMenu(targetId) {
         {id:'recruit', name:'Rekrut', type: 'private', targetRole: 'both'},
         {id:'citizen_rep', name:'Przedstawiciel Obywateli', type: 'public', targetRole: 'both'},
         {id:'tribune', name: 'Trybuna Umarłych', type: 'public', targetRole: 'both' },
-        {id:'boss_mama', name:'Boss Mama', type: 'public', targetRole: 'both'}
+        {id:'boss_mama', name:'Boss Mama', type: 'public', targetRole: 'both'},
+		{id:'veto', name:'Veto', type: 'public', targetRole: 'both'},
+		{id:'common_interest', name:'Wspólny Interes', type: 'private', targetRole: 'city'}, 
+		{id:'false_evidence', name:'Fałszywy Trop', type: 'private', targetRole: 'mafia'},
+		{id:'godfather', name:'Ojciec Chrzestny', type: 'private', targetRole: 'mafia'},
+		{id:'gambler', name:'Hazardzista', type: 'private', targetRole: 'both'},
+		{id:'dark_pact', name:'Mroczny Pakt', type: 'private', targetRole: 'both'},
+		{id:'rebound', name:'Rykoszet', type: 'private', targetRole: 'both'},
+		{id:'last will', name:'Ostatnia Wola', type: 'private', targetRole: 'both'},
+		{id:'voice_of_reason', name:'Głos Rozsądku', type: 'private', targetRole: 'both'}
     ];
 
     // --- KROK 1: WYBÓR FRAKCJI ---
@@ -1535,6 +1478,17 @@ socket.on('updateDelayedExecutionState', (state) => {
     }
 });
 
+socket.on('youAreInLove', ({ loverName, loverRole }) => {
+    // Używamy Twojej funkcji do pisania na czacie
+    addChatMessage("💖 ANIOŁ MIŁOŚCI", `Twoje serce bije teraz dla: ${loverName}! Ta osoba to: ${loverRole}.`, "system");
+    
+    // Jeśli masz już mini-kartę roli po prawej, dodajmy jej różową poświatę
+    const miniCard = document.getElementById('mini-role-card');
+    if (miniCard) {
+        miniCard.style.boxShadow = "0 0 25px #ff69b4";
+    }
+});
+
 socket.on('deadTalkStatus', (isActive) => {
 	deadTalkActive = isActive;
 	const chatContainer = document.getElementById('chat-container'); // upewnij się, że masz takie ID
@@ -1561,6 +1515,117 @@ socket.on('deadTalkStatus', (isActive) => {
         messageInput.placeholder = isActive ? "Głos zza grobu..." : "Umarli głosu nie mają";
 	}
 });
+
+function createHostActionIcon(id, action, label, fileName) {
+    return `
+        <div onclick="${action}; closeHostPanel()" title="${label}" style="
+            display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; width: 100px;
+        " onmouseover="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='scale(1)'">
+            <div style="
+                width: 80px; height: 80px; 
+                background-image: url('icons/${fileName}'); 
+                background-size: contain; background-repeat: no-repeat; background-position: center;
+                border: 2px solid #c5a05944; border-radius: 12px; background-color: #222;
+                margin-bottom: 8px; box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+            "></div>
+            <span style="
+                font-size: 13px; 
+                color: #c5a059; 
+                text-transform: uppercase; 
+                text-align: center; 
+                font-weight: bold; 
+                letter-spacing: 1px;
+                text-shadow: 1px 1px 2px black;
+                font-family: 'Garamond', serif;
+            ">${label}</span>
+        </div>
+    `;
+}
+
+window.openHostPanel = function(targetId) {
+    const p = playersCache.find(ptr => ptr.id === targetId);
+    if (!p) return;
+
+    // Tworzymy Overlay (tło)
+    const overlay = document.createElement('div');
+    overlay.id = 'host-panel-overlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: flex; justify-content: center;
+        align-items: center; z-index: 10000; backdrop-filter: blur(5px);
+    `;
+
+    // Budujemy zawartość panelu (Modal)
+    // Fragment wewnątrz window.openHostPanel w app.js
+    overlay.innerHTML = `
+        <div style="background: #1a1a1a; border: 2px solid #c5a059; padding: 30px; border-radius: 20px; width: 550px; color: white; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
+            <h2 style="color: #c5a059; margin-top: 0; text-align: center; font-family: 'Garamond', serif; letter-spacing: 3px; font-size: 28px; text-transform: uppercase;">
+			    ZARZĄDZANIE: ${p.name}
+			</h2>
+        
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 30px; justify-items: center;">
+            
+                ${createHostActionIcon('kill', `socket.emit('toggleAlive', '${p.id}', '${playerId}')`, 'Stan', 'skull.png')}
+                ${createHostActionIcon('protect', `socket.emit('toggleProtect', '${p.id}')`, 'Tarcza', 'shield.png')}
+                ${createHostActionIcon('role', `socket.emit('changeRole', '${p.id}', '${playerId}')`, 'Rola', 'refresh.png')}
+                ${createHostActionIcon('reveal', `socket.emit('hostRevealRole', '${p.id}')`, 'Ujawnij', 'lightbulb.png')}
+				${(p.role === 'Mafia' || p.role === 'Killer') ?
+				    createHostActionIcon('godfather', `socket.emit('setGodfather', '${p.id}')`, 'Ojciec Chrzestny', 'godfather.png')
+					: ''
+				}
+				${!p.alive ?
+				    createHostActionIcon('seance', `socket.emit('toggleGhostTalk', '${p.id}')`, p.canGhostTalk ? 'Przerwij Seans' : 'Seans Spiryt.', 'ghost.png')
+					:''
+				}
+            
+                ${createHostActionIcon('eye', `handleEyeClick('${p.id}')`, 'Karty', 'eye.png')}
+                ${createHostActionIcon('power', `showCardMenu('${p.id}')`, 'Moc', 'cards.png')}
+                ${createHostActionIcon('mute', `socket.emit('toggleMute', {playerId: '${p.id}', muted: ${!p.isMuted}})`, p.isMuted ? 'Odcisz' : 'Wycisz', 'mute.png')}
+				${createHostActionIcon('love', `handleLoveClick('${p.id}')`, p.isInLove ? 'Rozbij parę' : (firstLoverId === p.id ? 'Czeka...' : 'Połącz w parę'), 'heart.png')}
+                ${createHostActionIcon('double', `socket.emit('toggleDoubleVote', '${p.id}')`, 'Głos x2', 'scales.png')}
+            
+                ${createHostActionIcon('tribunal', `triggerTribunal('${p.id}')`, 'Sąd', 'tribunal.png')}
+            </div>
+
+            <button onclick="closeHostPanel()" style="width: 100%; margin-top: 35px; padding: 15px; background: #c5a059; border: none; color: black; font-weight: bold; cursor: pointer; border-radius: 8px; text-transform: uppercase; font-size: 16px; letter-spacing: 2px;">
+			    Powrót do Miasta
+			</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.closeHostPanel = function() {
+        const el = document.getElementById('host-panel-overlay');
+        if (el) el.remove();
+    };
+};
+
+window.handleLoveClick = function(id) {
+    if (!firstLoverId) { 
+        // Wybór pierwszej osoby
+        firstLoverId = id; 
+        appendMessageToChat('System', `Wybierz drugą osobę, aby połączyć ją z graczem: ${playersCache.find(p=>p.id===id)?.name}`, 'system');
+        renderPlayersWithVotes(); 
+    }
+    else if (firstLoverId === id) { 
+        // Kliknięcie tej samej osoby - anulowanie
+        firstLoverId = null; 
+        renderPlayersWithVotes(); 
+    }
+    else { 
+        // Wybór drugiej osoby - wysłanie do serwera
+        socket.emit('linkLovers', { 
+            player1Id: firstLoverId, 
+            player2Id: id, 
+            hostId: playerId 
+        }); 
+        firstLoverId = null; 
+    }
+    
+    // Zamykamy panel po kliknięciu, aby Host widział listę graczy i ikonkę statusu
+    if (typeof closeHostPanel === 'function') closeHostPanel();
+};
 
 // --- LOGIKA PRYWATNEGO NOTATNIKA ---
 const notebookBtn = document.getElementById('notebook-btn');
@@ -1620,6 +1685,50 @@ socket.on('updateReadyCount', (count, total) => {
     }
 });
 
+// app.js
+
+// Funkcja wyświetlająca wielki napis na środku ekranu
+function showLoveNotification() {
+    // Tworzymy kontener powiadomienia
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        z-index: 9999;
+        animation: fadeIn 0.5s ease;
+    `;
+
+    overlay.innerHTML = `
+        <h1 style="color: #ff69b4; font-size: 50px; text-shadow: 0 0 20px #ff69b4; margin-bottom: 10px;">
+            💖 Zakochałeś się!
+        </h1>
+        <p style="color: white; font-size: 20px; text-align: center;">
+            Twoje serce bije teraz dla kogoś innego.<br>
+            Jeśli Twój kochanek zginie - Ty również odejdziesz.
+        </p>
+        <button id="close-love-notif" style="
+            margin-top: 30px; padding: 10px 30px; 
+            background: #ff69b4; border: none; color: white; 
+            border-radius: 20px; cursor: pointer; font-weight: bold;
+        ">OK</button>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('close-love-notif').onclick = () => {
+        overlay.style.animation = 'fadeOut 0.5s ease';
+        setTimeout(() => overlay.remove(), 450);
+    };
+}
+
+// Nasłuchiwanie na sygnał z serwera
+socket.on('notificationLove', () => {
+    showLoveNotification();
+});
+
 // DODAJ TO: Resetowanie gotowości przy zmianie fazy
 socket.on('phaseChanged', (phase) => {
     amIReady = false;
@@ -1630,44 +1739,55 @@ socket.on('phaseChanged', (phase) => {
     }
 });
 socket.on('updateCards', cards => {
-	const cardsPanel = document.getElementById('cards-panel');
+    const cardsPanel = document.getElementById('cards-panel');
     const infoPanel = document.getElementById('card-info-panel');
-	
-	if (!cardsPanel || !infoPanel) {
-		console.error("Błąd: Nie znaleziono paneli kart w HTML!");
-		return;
-	}
-	
-	cardsPanel.innerHTML = '';
+    
+    if (!cardsPanel || !infoPanel) {
+        console.error("Błąd: Nie znaleziono paneli kart w HTML!");
+        return;
+    }
+    
+    cardsPanel.innerHTML = '';
 
-    // 1. CAŁKOWITE UKRYCIE PANELU NA START
     if (infoPanel) {
         infoPanel.innerHTML = '';
-        infoPanel.style.border = 'none';      // Żadnych ramek!
-        infoPanel.style.background = 'none';  // Żadnych tła!
-        infoPanel.style.minHeight = '0';      // Nie zajmuje miejsca!
+        infoPanel.style.border = 'none';
+        infoPanel.style.background = 'none';
+        infoPanel.style.minHeight = '0';
         infoPanel.style.height = 'auto';
         infoPanel.style.margin = '0';
     }
 
-    cards.forEach(c => {
+    cards.forEach((c, index) => {
         const div = document.createElement('div');
         div.className = 'card ' + (c.type === 'public' ? 'public' : 'private');
         div.style.backgroundImage = `url('cards/${c.id}.png')`;
+        div.style.position = 'relative'; // Ważne dla pozycjonowania przycisku X
 
-        // 2. POKAZANIE TYLKO PRZY NAJECHANIU
+        // --- DODAJEMY PRZYCISK USUWANIA TYLKO DLA HOSTA PODCZAS PODGLĄDU ---
+        if (isHost && spyingPlayerId) {
+            const removeBtn = document.createElement('div');
+            removeBtn.innerHTML = '✕';
+            removeBtn.style = `
+                position: absolute; top: -5px; right: -5px; width: 22px; height: 22px;
+                background: red; color: white; border-radius: 50%; display: flex;
+                align-items: center; justify-content: center; font-weight: bold;
+                cursor: pointer; border: 2px solid white; z-index: 100; font-size: 14px;
+            `;
+            removeBtn.onclick = (e) => {
+                e.stopPropagation(); // Żeby nie kliknąć w kartę przy usuwaniu
+                socket.emit('removePlayerCard', { targetId: spyingPlayerId, cardIndex: index });
+            };
+            div.appendChild(removeBtn);
+        }
+
         div.onmouseenter = () => {
-            const typeText = c.type === 'public' 
-                ? 'Informacja publiczna.' 
-                : 'Informacja prywatna (Gospodarz).';
-            
-            // Dodajemy tło i padding tylko wtedy, gdy jest tekst
-			infoPanel.style.display = 'flex';
+            const typeText = c.type === 'public' ? 'O użyciu tej karty dowiedzą się wszyscy!' : 'Spotkanie z Gospodarzem.';
+            infoPanel.style.display = 'flex';
             infoPanel.style.background = 'rgba(0, 0, 0, 0.7)';
             infoPanel.style.padding = '10px';
             infoPanel.style.marginTop = '10px';
             infoPanel.style.borderRadius = '8px';
-
             infoPanel.innerHTML = `
                 <div style="font-weight:bold; font-size:26px; color:#FF0000; margin-bottom:2px;">${c.name}</div>
                 <div style="font-size:20px; color:#fff;">${c.description}</div>
@@ -1675,26 +1795,24 @@ socket.on('updateCards', cards => {
             `;
         };
 
-        // 3. CAŁKOWITE CZYSZCZENIE PRZY ZEJŚCIU
         div.onmouseleave = () => {
             infoPanel.innerHTML = '';
-			infoPanel.style.display = 'none';
+            infoPanel.style.display = 'none';
             infoPanel.style.background = 'none';
             infoPanel.style.padding = '0';
             infoPanel.style.marginTop = '0';
         };
 
         div.onclick = async () => {
-			if (isHost) {
-				addChatMessage("Gospodarz", "Tylko podglądasz te karty. Nie możesz ich użyć.", "system");
-				return;
-			}
+            if (isHost) {
+                addMessage("Gospodarz", "Tylko podglądasz te karty. Nie możesz ich użyć.", "system");
+                return;
+            }
             const me = playersCache.find(p => p.id === playerId);
             if (me && !me.alive) {
                 await showModal("Błąd!", "Umarli nie mogą używać kart mocy!", false);
                 return;
             }
-            
             const confirmed = await showModal("Użycie karty", `Czy na pewno chcesz użyć: ${c.name}?`);
             if (confirmed) {
                 socket.emit('useCard', { playerId, cardId: c.id });
