@@ -26,6 +26,7 @@ let bossMamaActive = false;
 let fullMoonActive = false;
 let pendingSilenceTarget = null; 
 let silentSabotageActive = false;
+let godfatherId = null; 
 let fogOfWarActive = false;
 let mafiaTargets = []; 
 let votes = {};
@@ -44,6 +45,7 @@ let cardsDatabase = [
 	{id:'fog_of_war', name:'Mgła Wojny', description:'Podczas najbliższego głosowania licznik głosów będzie widoczny tylko dla Gospodarza.', type:'private', roles:['Mafia']},
     {id:'silence_card', name:'Wyciszenie', description:'Użycie tej karty blokuje możliwość zagrania jakiejkolwiek innej karty do końca rundy.', type:'public', roles:['Miasto','Mafia']},
     {id:'power_for_selected', name:'Moc Dla Wybranych', description:'Ty oraz dwie wybrane przez Ciebie osoby otrzymujecie kartę mocy.', type:'public', roles:['Miasto','Mafia']},
+	{id:'spiritual_seance', name:'Seans Spirytystyczny', description:'Wybierz gracza ze Świata Umarłych, który będzie mógł wypowiadać się podczas najbliższej Dyskusji.', type:'public', roles:['Miasto','Mafia']},
 
     {id:'misfire', name:'Błędny Strzał', description:'Najbliższej nocy osoba wyeliminowana przez mafie jest losowa. Strzał może również trafić w członka mafii.', type:'private', roles:['Miasto','Mafia']},
     {id:'support', name:'Wsparcie', description:'Wskaż gospodarzowi osobę, z którą będziesz bezpieczny najbliższej nocy.', type:'private', roles:['Miasto','Mafia']},
@@ -52,10 +54,10 @@ let cardsDatabase = [
     {id:'bodyguard', name:'Ochroniarz', description:'Wskaż dwie osoby, które nie będą mogły brać udziału w najbliższym głosowaniu. Nie mogą one zostać wyeliminowane w jego trakcie.', type:'public', roles:['Miasto','Mafia']},
     {id:'don_decision', name:'Decyzja Dona', description:'Musisz zagrać te kartę od razu. Następuje rzut monetą, który decyzuje o tym czy odpadniesz z gry czy przeżyjesz.', type:'public', roles:['Miasto','Mafia']},
     {id:'chosen_of_dead', name:'Wybraniec Umarłych', description:'Użyj tej karty by przywrócić do świata żywych losowego gracza.', type:'public', roles:['Miasto','Mafia']},
+	{id:'lovers', name:'Anioł Miłości', description:'Wybierz dwóch graczy, aby następnej nocy połączyć ich miłością, silniejszą od przynależności do roli. Jeśli jeden z zakochanych zginie, drugi odpada razem z nim', type:'private', roles:['Miasto','Mafia']},
 
     {id:'delayed_execution', name:'Oddalona Egzekucja', description:'Zagraj te kartę aby ochronić członka Mafii w najbliższym głosowaniu. Jeśli wskazany gracz jest z Mafii, nie odpada z gry.', type:'public', roles:['Miasto','Mafia']},
     {id:'untouchable', name:'Nietykalny', description:'Użyj tej karty by otrzymać nietykalność. Nie możesz zostać wyeliminowany następnej nocy przez Mafie.', type:'private', roles:['Miasto','Mafia']},
-
     {id:'miracle_worker', name:'Cudotwórca', description:'Wskaż osobę ze Świata Umarłych, która natychmiast powróci do gry.', type:'public', roles:['Miasto','Mafia']},
     {id:'sniper', name:'Snajper', description:'Wskaż osobę którą chcesz wyeliminować z gry. Jeżeli trafisz Obywatela- odpadasz razem z nim.', type:'public', roles:['Miasto','Mafia']},
     {id:'cancel_power', name:'Karta Anulacji Mocy', description:'Wskaż gracza, którego zagrana karta mocy straci swoje działanie.', type:'public', roles:['Miasto','Mafia']},
@@ -74,6 +76,15 @@ let cardsDatabase = [
     {id:'recruit', name:'Rekrut', description:'Dołączasz do grona Mafii i budzisz się z nimi w najbliższej fazie nocy. Zostajesz Mafią do końca gry.', type:'private', roles:['Miasto','Mafia']},
 	{id:'tribune', name: 'Trybuna Umarłych', description:'Użyj tej karty aby uciszyć żyjących i przenieść dalszą dyskusję z głosowaniem na ręce umarłych. Dziś to oni zdecydują kto odpada.', type: 'public', roles:['Miasto','Mafia']},
     {id:'citizen_rep', name:'Przedstawiciel Obywateli', description:'Wskaż osobę, która będzie miała podwójny głos do końca rozgrywki. Nie możesz wskazać siebie.', type:'public', roles:['Miasto','Mafia']},
+	{id:'veto', name:'Veto', description:'Możesz anulować głosowanie w bieżącej fazie dnia.', type:'public', roles:['Miasto','Mafia']},
+	{id:'common_interest', name:'Wspólny Interes', description:'Wybierz dwóch graczy, a Gospodarz powie Ci czy są w tych samych frakcjach. Nie możesz podzielić się tą informacją.', type:'private', roles:['Miasto']},
+	{id:'false_evidence', name:'Fałszywy Trop', description:'Wskaż gracza, który po sprawdzeniu jego przynależności przez inncyh gracze ukaże się jako Mafia.', type:'private', roles:['Mafia']},
+	{id:'godfather', name:'Ojciec Chrzestny', description:'Użyj tej karty aby Twój głos był kluczowy podczas eliminacji gracza w nocy.', type:'private', roles:['Mafia']},
+	{id:'gambler', name:'Hazardzista', description:'Wytypuj gracza, który według Ciebie zostanie w tej rundzie wyeliminowany przez Miasto. Jeśli trafisz otrzymujesz 2 Karty Mocy, jeśli nie- tracisz wszystkie posiadane karty i możliwość ich zdobycia następnego dnia.', type:'private', roles:['Miasto','Mafia']},
+	{id:'dark_pact', name:'Mroczny Pakt', description:'Wybierz gracza, który otrzyma każdy nałożony na Ciebie efekt (w tym śmierć) aż do końca gry.', type:'private', roles:['Miasto','Mafia']},
+	{id:'rebound', name:'Rykoszet', description:'Jeśli ktoś użyje na Tobie negatywnej Karty Mocy w tej rundzie, jej efekt odbije się w nadawcę.', type:'private', roles:['Miasto','Mafia']},
+	{id:'last_will', name:'Ostatnia Wola', description:'Wskaż Gospodarzowi gracza, który otrzyma wszystkie Twoje Karty Mocy jeśli zginiesz.', type:'private', roles:['Miasto','Mafia']},
+	{id:'voice_of_reason', name:'Głos Rozsądku', description:'Zadaj Gospodarzowi jedno pytanie o stan gry, na które ten musi odpowiedzieć Tak lub Nie.', type:'private', roles:['Miasto','Mafia']},
 
     {id:'boss_mama', name:'Boss Mama', description:'Używając tej karty wyciszasz mafię następnej nocy. Nie może ona wtedy nikogo wyeliminować.', type:'public', roles:['Miasto','Mafia']}
 ];
@@ -310,6 +321,7 @@ io.on('connection', socket => {
             
             // Czyszczenie osłon na koniec nocy
             players.forEach(p => p.protected = false);
+			godfatherId = null; // Rola wygasa po nocy
             io.emit('updatePlayers', players.filter(p=>p && p.id && p.name));
         }
 
@@ -412,7 +424,7 @@ io.on('connection', socket => {
         if (!voter) return;
         
         // 🔥 NOWE: BLOKADA DLA WYCISZONYCH (OCHRONIARZ)
-        if (voter.muted) {
+        if (voter.isMuted) {
             io.to(voterId).emit('systemMessage', 'Jesteś wyciszony (Ochroniarz)! Nie możesz oddawać głosu.');
             return;
         }
@@ -456,6 +468,49 @@ io.on('connection', socket => {
             io.emit('updateVotes', votes);
         }
 		
+    });
+	
+	// --- 🎩️ USTAWIANIE OJCA CHRZESTNEGO ---
+    socket.on('setGodfather', (targetId) => {
+        // Sprawdzamy, czy to Host wysyła żądanie
+        const sender = players.find(p => p.id === socket.id);
+        if (!sender || !sender.isHost) return;
+
+        // Przypisujemy rolę
+        godfatherId = targetId; 
+    
+        // Ustawiamy flagę na obiektach graczy (żeby frontend widział to w playersCache)
+        players.forEach(p => {
+            p.isGodfather = (p.id === targetId);
+        });
+
+        const target = players.find(p => p.id === targetId);
+
+        // Powiadomienie tylko dla Mafii i Hosta
+        players.forEach(p => {
+             if (['Mafia', 'Killer', 'Boss'].includes(p.role) || p.isHost) {
+                io.to(p.id).emit('chatMessage', { 
+                    msg: `🎩️ Ojciec Chrzestny: ${target ? target.name : 'Nikt'}. Tylko on może dziś eliminować!`, 
+                    from: 'SYSTEM', 
+                    type: 'mafia' 
+                });
+            }
+        });
+
+        // Rozsyłamy zaktualizowaną listę graczy z nową flagą isGodfather
+        io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
+    });
+
+	socket.on('toggleProtect', (targetId) => {
+        const host = players.find(p => p.id === socket.id && p.isHost);
+        if (!host) return;
+
+        const target = players.find(p => p.id === targetId);
+        if (target) {
+            target.protected = !target.protected;
+            // Kluczowe: informujemy wszystkich o zmianie, żeby ikona się zaświeciła
+            io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
+        }
     });
 
     // 💀 TRYBUNA UMARŁYCH
@@ -596,6 +651,34 @@ io.on('connection', socket => {
         io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
     });
 	
+	socket.on('linkLovers', ({ player1Id, player2Id, hostId }) => {
+        // Szukamy graczy po ID w tablicy
+        const p1 = players.find(p => p.id === player1Id);
+        const p2 = players.find(p => p.id === player2Id);
+        
+        if (p1 && p2) {
+            p1.isInLove = true;
+            p1.loverId = player2Id;
+            p2.isInLove = true;
+            p2.loverId = player1Id;
+			
+			io.to(p1.id).emit('notificationLove');
+            io.to(p2.id).emit('notificationLove');
+            
+            io.to(player1Id).emit('youAreInLove', { loverName: p2.name, loverRole: p2.role });
+            io.to(player2Id).emit('youAreInLove', { loverName: p1.name, loverRole: p1.role });
+            
+            // Wysyłamy wiadomość do wszystkich
+            io.emit('chatMessage', {
+                text: `💖 Anioł Miłości połączył dwa serca: ${p1.name} i ${p2.name}! Ich los jest teraz wspólny.`, 
+                color: "#ff69b4"
+            });
+
+            // Odświeżamy listę u wszystkich (żeby host zobaczył różowe ikony)
+            io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
+        }
+    });
+	
 	socket.on('toggleDelayedExecution', () => {
         const host = players.find(p => p.id === socket.id && p.isHost);
         if (!host) return;
@@ -634,6 +717,48 @@ io.on('connection', socket => {
 			}
 		}
         io.emit('updatePlayers', players.filter(p=>p && p.id && p.name));
+    });
+	
+	socket.on('toggleGhostTalk', (targetId) => {
+        const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+		
+		const target = players.find(p => p.id === targetId);
+        if (target) {
+            target.canGhostTalk = !target.canGhostTalk;
+			
+			if (target.canGhostTalk) {
+				io.to(target.id).emit('systemMessage', '✨ Medium nawiązało z Tobą kontakt! Możesz teraz pisać na czacie Miasta.');
+			} else {
+				io.to(target.id).emit('systemMessage', '✨ Kontakt z medium został przerwany. Znów jesteś tylko obserwatorem.');
+			}
+			
+            io.emit('updatePlayers', players.map(p => ({
+                ...p,
+                canGhostTalk: p.canGhostTalk
+            })));
+        }
+    });
+	
+	socket.on('setGodfather', (targetId) => {
+        const sender = players.find(p => p.id === socket.id);
+        if (!sender || !sender.isHost) return;
+
+        godfatherId = targetId; // Ustawiamy kto rządzi
+        const target = players.find(p => p.id === targetId);
+    
+        // Powiadomienie na czat Mafii (tylko oni wiedzą, kto rządzi)
+        players.forEach(p => {
+            if (['Mafia', 'Killer', 'Boss'].includes(p.role) || p.isHost) {
+                io.to(p.id).emit('chatMessage', { 
+                    msg: `🕴️ Ojciec Chrzestny został wybrany: ${target ? target.name : 'Nikt'}. Tylko on może dziś eliminować!`, 
+                    from: 'SYSTEM', 
+                    type: 'mafia' 
+                });
+            }
+        });
+
+        io.emit('updatePlayers', players.map(p => ({ ...p, isGodfather: p.id === godfatherId })));
     });
 
     // 😇 WSKRZESZENIE
@@ -708,6 +833,11 @@ io.on('connection', socket => {
         const sender = players.find(p=>p.id===socket.id);
 		if(!sender) return;
 		
+		if (sender.isMuted) {
+            socket.emit('systemMessage', 'Jesteś wyciszony i nie możesz krzyczeć!');
+            return;
+        }
+		
 		const dataToSend = {
 			msg: msg, 
             from: sender.isHost ? "Gospodarz" : from, // Serwer sam podmienia nick na "Gospodarz"
@@ -744,7 +874,7 @@ io.on('connection', socket => {
 			}
 			
 			// Standardowa blokada dla umarłych (którą już masz)
-			if (!deadTalkActive && !sender.alive) {
+			if (!deadTalkActive && !sender.alive && !sender.canGhostTalk) {
 				io.to(socket.id).emit('systemMessage', 'Nie żyjesz - nie możesz pisać na czacie miasta!');
                 return;
 			}
@@ -857,6 +987,24 @@ io.on('connection', socket => {
         // Wspólne czyszczenie karty po użyciu
         player.cards = player.cards.filter(c => c.id !== cardId);
         io.to(player.id).emit('updateCards', player.cards);
+    });
+	
+	// --- 🗑️ USUWANIE KARTY PRZEZ HOSTA ---
+    socket.on('removePlayerCard', ({ targetId, cardIndex }) => {
+        const sender = players.find(p => p.id === socket.id);
+        if (!sender || !sender.isHost) return;
+
+        const target = players.find(p => p.id === targetId);
+        if (target && target.cards) {
+            // Usuwamy kartę o konkretnym indeksie
+            target.cards.splice(cardIndex, 1);
+        
+            // Informujemy gracza o zmianie w jego kartach
+            io.to(target.id).emit('updateCards', target.cards);
+        
+            // Odświeżamy widok u wszystkich (żeby Host widział zmiany w podglądzie)
+            io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
+        }
     });
 
 
