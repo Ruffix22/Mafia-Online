@@ -45,14 +45,11 @@ if (joinBtn) {
 
         // Wysłanie danych do serwera
         socket.emit('joinGame', { name: playerName, isHost: isHost });
-		socket.emit('requestMyCards', playerName); // Poproś o karty po zalogowaniu
+        socket.emit('requestMyCards', playerName);
 
-        // Efektowne przejście: Ukrywamy login, pokazujemy grę
+        // Efektowne przejście
         loginContainer.style.opacity = "0";
         loginContainer.style.transition = "opacity 0.5s ease";
-        
-        // --- LOGIKA LOGOWANIA ---
-// ... (początek bez zmian, aż do setTimeout)
 
         setTimeout(() => {
             loginContainer.style.display = 'none';
@@ -63,31 +60,31 @@ if (joinBtn) {
             document.querySelector('.main-game-area').style.display = 'flex';
             document.getElementById('inventory-center').style.display = 'block'; 
             
-            // PASEK BOCZNY (Ikony kart/toss)
+            // --- LOGIKA PANELI BOCZNYCH I NARZĘDZI ---
             const sideBar = document.getElementById('coin-toss-container');
-            sideBar.style.display = 'flex';
-
-            // NARZĘDZIA (Notatnik i Skip) - Pokazujemy cały kontener
             const utilityTools = document.getElementById('utility-tools');
-            if (utilityTools) {
-                utilityTools.style.display = 'flex';
-            }
-            
-            // Logika wyświetlania konkretnych przycisków
+
             if (isHost) {
+                // HOST: Widzi wszystko
+                if (sideBar) sideBar.style.display = 'grid';
+                if (utilityTools) utilityTools.style.display = 'flex';
                 document.getElementById('top-bar').style.display = 'flex';
             } else {
-                // Ukrywamy przyciski hosta
-                const hostButtons = [
-                    'coin-btn', 'wheel-btn', 'misfire-btn', 'boss-mama-btn', 
-                    'dead-talk-btn', 'full-moon-btn', 'judge-btn', 'delayed-exec-btn'
-                ];
-                hostButtons.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.display = 'none';
-                });
+                // GRACZ: Całkowicie ukrywamy czarny pasek (sidebar)
+                if (sideBar) {
+                    sideBar.style.display = 'none'; // To usuwa czarny pasek u gracza
+                }
 
-                // Upewniamy się, że narzędzia gracza są widoczne (POPRAWIONE ID)
+                // Ukrywamy pasek górny
+                const topBar = document.getElementById('top-bar');
+                if (topBar) topBar.style.display = 'none';
+
+                // Pokazujemy narzędzia (Notatnik/Skip), które teraz są pod czatem
+                if (utilityTools) {
+                    utilityTools.style.display = 'flex';
+                }
+
+                // Dodatkowe upewnienie się, że przyciski wewnątrz są widoczne
                 const noteBtn = document.getElementById('notebook-btn');
                 const skipBtn = document.getElementById('skip-phase-btn');
                 if (noteBtn) noteBtn.style.display = 'flex';
@@ -163,13 +160,43 @@ if (isHost) {
 	if (deadTalkBtn) deadTalkBtn.style.display = 'block';
 }
 
+// app.js - Obsługa przycisku monety u Hosta
 if (coinBtn) {
     coinBtn.onclick = () => {
-        coinBtn.classList.add('coin-spin');
-        socket.emit('tossCoin', playerId);
-        setTimeout(() => coinBtn.classList.remove('coin-spin'), 600);
+        // Tworzymy proste menu wyboru typu rzutu
+        const menu = document.createElement('div');
+        menu.id = 'coin-selector-menu';
+        menu.className = 'modal-overlay';
+        menu.style.zIndex = "10002"; // Nad innymi elementami
+
+        menu.innerHTML = `
+            <div class="modal-content" style="border: 2px solid gold; background: #1a1a1a;">
+                <h3 style="color: gold; margin-bottom: 20px;">WYBIERZ RODZAJ RZUTU</h3>
+                <div style="display: flex; gap: 20px; justify-content: center;">
+                    <div onclick="startCoinToss('don')" style="cursor:pointer; text-align:center;">
+                        <div style="width:100px; height:140px; background-image:url('cards/don_decision.png'); background-size:cover; border-radius:10px; border:1px solid #555;"></div>
+                        <p style="font-size:12px; margin-top:5px;">DECYZJA DONA</p>
+                    </div>
+                    <div onclick="startCoinToss('luck')" style="cursor:pointer; text-align:center;">
+                        <div style="width:100px; height:140px; background-image:url('cards/luck_shot.png'); background-size:cover; border-radius:10px; border:1px solid #555;"></div>
+                        <p style="font-size:12px; margin-top:5px;">ŁUT SZCZĘŚCIA</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('coin-selector-menu').remove()" style="margin-top:20px; background:#444; color:white; border:none; padding:5px 15px; border-radius:5px; cursor:pointer;">Anuluj</button>
+            </div>
+        `;
+        document.body.appendChild(menu);
     };
 }
+
+// Funkcja pomocnicza do wysłania sygnału
+window.startCoinToss = function(type) {
+    socket.emit('tossCoin', { hostId: playerId, type: type });
+    const menu = document.getElementById('coin-selector-menu');
+    if (menu) menu.remove();
+    if (coinBtn) coinBtn.classList.add('coin-spin');
+    setTimeout(() => { if(coinBtn) coinBtn.classList.remove('coin-spin') }, 600);
+};
 
 // Obiekt przechowujący nasze dźwięki
 const gameSounds = {
@@ -200,26 +227,64 @@ if (isHost && wheelBtn) {
     wheelBtn.style.display = 'block';
 }
 
+// app.js - Podmień obsługę kliknięcia wheelBtn
 if (wheelBtn) {
     wheelBtn.onclick = () => {
-        // 1. Sprawdzamy graczy
-        const alivePlayers = playersCache.filter(p => p.alive && !p.isHost);
-        
-        // 2. Jeśli testujesz sam (brak graczy), dodajemy testowego, żebyś widział okno
-        const playersToDraw = alivePlayers.length > 0 ? alivePlayers : [{name: "TEST", id: "test"}];
+        // Tworzymy menu wyboru grupy do losowania
+        const menu = document.createElement('div');
+        menu.id = 'wheel-selector-menu';
+        menu.className = 'modal-overlay';
+        menu.style.zIndex = "10002";
 
-        // 3. KLUCZOWE: Pokaż okno u siebie!
-        wheelOverlay.style.display = 'flex';
-        drawWheel(playersToDraw);
-
-        // 4. Wyślij sygnał do innych
-        const randomAngle = Math.floor(Math.random() * 360) + 1440;
-        socket.emit('startWheelSpin', {
-            alivePlayers: playersToDraw,
-            finalAngle: randomAngle
-        });
+        menu.innerHTML = `
+            <div class="modal-content" style="border: 2px solid #5c1cff; background: #1a1a1a; padding: 30px;">
+                <h3 style="color: #5c1cff; margin-bottom: 20px;">KOGO LOSUJEMY?</h3>
+                <div style="display: flex; gap: 20px; justify-content: center;">
+                    <div onclick="initiateWheel('alive')" style="cursor:pointer; text-align:center;">
+                        <div style="width:120px; height:120px; border: 3px solid #2ecc71; border-radius:50%; display:flex; align-items:center; justify-content:center; background: rgba(46, 204, 113, 0.1);">
+                            <span style="font-size: 40px;">👥</span>
+                        </div>
+                        <p style="color:#2ecc71; margin-top:10px; font-weight:bold;">ŻYWI</p>
+                    </div>
+                    <div onclick="initiateWheel('dead')" style="cursor:pointer; text-align:center;">
+                        <div style="width:120px; height:120px; border: 3px solid #e74c3c; border-radius:50%; display:flex; align-items:center; justify-content:center; background: rgba(231, 76, 60, 0.1);">
+                            <span style="font-size: 40px;">💀</span>
+                        </div>
+                        <p style="color:#e74c3c; margin-top:10px; font-weight:bold;">MARTWI</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('wheel-selector-menu').remove()" style="margin-top:20px; background:#444; color:white; border:none; padding:8px 20px; border-radius:5px; cursor:pointer;">Anuluj</button>
+            </div>
+        `;
+        document.body.appendChild(menu);
     };
 }
+
+// Funkcja wywołująca właściwe losowanie
+window.initiateWheel = function(group) {
+    let filteredPlayers = [];
+    if (group === 'alive') {
+        filteredPlayers = playersCache.filter(p => p.alive && !p.isHost);
+    } else {
+        filteredPlayers = playersCache.filter(p => !p.alive && !p.isHost);
+    }
+
+    if (filteredPlayers.length === 0) {
+        alert("Brak graczy w wybranej grupie!");
+        return;
+    }
+
+    // Usuwamy menu i otwieramy koło
+    document.getElementById('wheel-selector-menu').remove();
+    wheelOverlay.style.display = 'flex';
+    drawWheel(filteredPlayers);
+
+    const randomAngle = Math.floor(Math.random() * 360) + 1440;
+    socket.emit('startWheelSpin', {
+        alivePlayers: filteredPlayers, // nazwa klucza zostaje stara, żeby nie psuć reszty kodu
+        finalAngle: randomAngle
+    });
+};
 
 // Obsługa przycisku zamknij
 const closeWheelBtn = document.getElementById('close-wheel-btn');
@@ -485,6 +550,21 @@ function renderPlayersWithVotes() {
             vBtn.onclick = () => vote(p.id, p.name);
             div.appendChild(vBtn);
         }
+		
+		if (currentPhase === 'Noc' && meLocal.role === 'Mafia' && p.role !== 'Mafia' && p.alive) {
+			const amIGodfather = (godfatherId === playerId);
+			const isAnyGodfatherSet = (godfatherId !== null && godfatherId !== undefined);
+			
+			if (!isAnyGodfatherSet || amIGodfather) {
+				const mBtn = document.createElement('span');
+				mBtn.innerHTML = ' 🎯';
+				mBtn.style.marginLeft = '10px';
+				mBtn.style.cursor = 'pointer';
+				mBtn.title = "Wybierz cel dla Mafii";
+				mBtn.onclick = () => socket.emit('mafiaVote', p.id);
+				div.appendChild(mBtn);
+			}
+		}
 
         if (isHost && !p.isHost) {
             const mutedIcon = p.isMuted ? '🔇' : '🎤';
@@ -543,6 +623,19 @@ socket.on('updatePlayers', players => {
     const me = players.find(p => p.id === socket.id);
 
     if (me) {
+		// --- LOGIKA STATUSÓW (KLĄTW I DARÓW) ---
+        const myStatuses = [];
+		
+		if (me.protected) myStatuses.push('shield');        
+		if (me.exposed || me.isPurified) myStatuses.push('revealed'); 
+		if (me.isGodfather) myStatuses.push('godfather');    
+		if (me.isMuted) myStatuses.push('muted');          
+		if (me.isInLove) myStatuses.push('loved');           
+		if (me.doubleVote) myStatuses.push('rep');
+		
+		updatePlayerStatuses(myStatuses);
+		
+		
         // Jeśli nie żyjesz (alive === false)
         if (!me.alive) {
             // Dodaj efekty tylko, jeśli jeszcze ich nie ma (żeby nie powtarzać błysku)
@@ -565,32 +658,108 @@ socket.on('updatePlayers', players => {
     renderPlayersWithVotes();
 });
 
+function openBlackmailMenu(victimId) {
+    const victim = playersCache.find(p => p.id === victimId);
+    if (!victim) return;
+
+    // Tworzymy tymczasowy panel wyboru celu
+    const targetSelector = document.createElement('div');
+    targetSelector.id = 'blackmail-target-selector';
+    targetSelector.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); z-index: 10001; display: flex;
+        flex-direction: column; align-items: center; justify-content: center;
+        backdrop-filter: blur(10px);
+    `;
+
+    let playersHtml = playersCache
+        .filter(p => p.alive && !p.isHost && p.id !== victimId)
+        .map(p => `
+            <button onclick="confirmBlackmail('${victimId}', '${p.id}')" 
+                style="width: 300px; padding: 15px; margin: 5px; background: #222; border: 1px solid #c5a059; color: white; cursor: pointer; border-radius: 8px; font-weight: bold;">
+                ${p.name}
+            </button>
+        `).join('');
+
+    targetSelector.innerHTML = `
+        <h2 style="color: #c5a059; margin-bottom: 20px;">WYBIERZ CEL SZANTAŻU DLA ${victim.name.toUpperCase()}</h2>
+        <div style="display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto;">
+            ${playersHtml}
+        </div>
+        <button onclick="document.getElementById('blackmail-target-selector').remove()" 
+            style="margin-top: 20px; background: #c0392b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+            Anuluj
+        </button>
+    `;
+
+    document.body.appendChild(targetSelector);
+}
+
+// Funkcja pomocnicza do wysłania wyboru
+window.confirmBlackmail = function(victimId, targetId) {
+    socket.emit('setBlackmail', { victimId, targetId });
+    const el = document.getElementById('blackmail-target-selector');
+    if (el) el.remove();
+    closeHostPanel();
+};
+
+function updatePlayerStatuses(activeStatuses) {
+    const container = document.getElementById('status-effects-container');
+    if (!container) return;
+
+    container.innerHTML = ''; // Czyścimy stare ikony
+
+    const statusMap = {
+        'shield': { img: 'shield.png', tip: 'Tarcza: Jesteś chroniony.' },
+        'revealed': { img: 'eye.png', tip: 'Ujawniony: Miasto zna Twoją rolę.' },
+        'godfather': { img: 'godfather.png', tip: 'Ojciec Chrzestny: Twój głos decyduje w nocy.' },
+        'muted': { img: 'mute.png', tip: 'Wyciszony: Nie możesz pisać na czacie.' },
+        'loved': { img: 'heart.png', tip: 'Zakochany: Giniesz razem z partnerem.' },
+        'rep': { img: 'scales.png', tip: 'Przedstawiciel: Masz podwójny głos.' }
+    };
+
+    activeStatuses.forEach(statusKey => {
+        const data = statusMap[statusKey];
+        if (data) {
+            const iconDiv = document.createElement('div');
+            iconDiv.className = `status-icon ${statusKey}`;
+            iconDiv.style.backgroundImage = `url('icons/${data.img}')`;
+            iconDiv.setAttribute('data-tooltip', data.tip);
+            container.appendChild(iconDiv);
+        }
+    });
+}
+
 //////////////////////////////////////////////////////
 // 🔥 LIVE GŁOSY
 //////////////////////////////////////////////////////
 socket.on('updateVotes', (allVotes) => {
-    votes = allVotes; // Zapisujemy to, co przysłał serwer
-    renderPlayersWithVotes(); // Wywołujemy funkcję, którą właśnie poprawiliśmy
+    const oldVote = votes[playerId]; // sprawdzamy czy mieliśmy głos
+    votes = allVotes; 
+    
+    if(!oldVote && votes[playerId] && votes[playerId] !== 'invalid') {
+        const target = playersCache.find(p => p.id === votes[playerId]);
+        if(target) showVoteInfo(target.name);
+    }
+
+    renderPlayersWithVotes(); 
 });
 
 //////////////////////////////////////////////////////
 // 🔥 GŁOSOWANIE
 //////////////////////////////////////////////////////
-async function vote(targetId, targetName){
-    if(hasVoted){
-        await showModal("Już oddałeś głos!", false);
+function vote(targetId, targetName) {
+    // Jeśli serwer przysłał nam już jakiś głos i nie jest to 'invalid', to blokujemy
+    if (votes[playerId] && votes[playerId] !== 'invalid') {
+        showModal("Już oddałeś głos!", `Twój głos na ${targetName} został już zarejestrowany.`, false);
         return;
     }
 
-    socket.emit('vote',{
+    // Wysyłamy prośbę do serwera. Nie ustawiamy nic lokalnie!
+    socket.emit('vote', {
         voterId: playerId,
         targetId: targetId
     });
-
-    hasVoted = true;
-    votedFor = targetName;
-
-    showVoteInfo(targetName);
 }
 
 function showVoteInfo(name){
@@ -715,7 +884,35 @@ function revive(id){ socket.emit('revive',id,playerId); }
 function changeRole(id){ socket.emit('changeRole',id,playerId); }
 function toggleProtect(id){ socket.emit('toggleProtect', id, playerId); }
 
-startGameBtn.onclick = ()=>socket.emit('startGame',socket.id);
+// --- NOWA LOGIKA STARTU GRY Z WYBOREM MAFII ---
+startGameBtn.onclick = () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'mafia-selector-overlay';
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="border: 2px solid #ff5252; min-width: 400px; background: #111;">
+            <h2 style="color: #ff5252; margin-top: 0; letter-spacing: 2px;">WYBÓR LICZBY MAFII</h2>
+            <p style="color: #ccc; margin-bottom: 25px;">Ilu morderców ma grasować w mieście?</p>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
+                <button onclick="confirmStartWithMafia(1)" style="background: #222; border: 1px solid #ff5252; color: white; padding: 15px 25px; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 20px;">1</button>
+                <button onclick="confirmStartWithMafia(2)" style="background: #222; border: 1px solid #ff5252; color: white; padding: 15px 25px; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 20px;">2</button>
+                <button onclick="confirmStartWithMafia(3)" style="background: #222; border: 1px solid #ff5252; color: white; padding: 15px 25px; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 20px;">3</button>
+            </div>
+            <button onclick="document.getElementById('mafia-selector-overlay').remove()" class="cancel-btn" style="background: #444; border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer;">ANULUJ</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+};
+
+// Funkcja wywoływana przez przyciski w panelu
+window.confirmStartWithMafia = function(count) {
+    socket.emit('startGame', { hostId: playerId, manualMafiaCount: count });
+    const overlay = document.getElementById('mafia-selector-overlay');
+    if (overlay) overlay.remove();
+};
+// ----------------------------------------------
+
 dayBtn.onclick = ()=>socket.emit('changePhase','Dzień',playerId);
 nightBtn.onclick = ()=>socket.emit('changePhase','Noc',playerId);
 startVotingBtn.onclick = ()=>socket.emit('startVoting',playerId);
@@ -794,7 +991,7 @@ socket.on('chatMessage', (data) => {
     }
 });
 
-// 2. FUNKCJA RYSUJĄCA (Naprawiony ReferenceError)
+// 2. FUNKCJA RYSUJĄCA (Zintegrowana z Duchami na Linii)
 function appendMessageToChat(sender, text, type = 'city', senderId = null) {
     let targetId = (type === 'private') ? 'chat-messages-private' : 
                    (type === 'mafia' ? 'chat-messages-mafia' : 'chat-messages-city');
@@ -809,27 +1006,36 @@ function appendMessageToChat(sender, text, type = 'city', senderId = null) {
     let displaySender = sender;
     let senderColor = '#3498db'; // Domyślny niebieski
     let fontWeight = 'bold';
+    let isGhost = false;
 
-    // 1. Sprawdzamy czy to SYSTEM
-    if (type === 'system' || sender === 'System' || sender === 'SYSTEM') {
-        displaySender = 'SYSTEM';
-        senderColor = '#ff4d4d'; // Intensywny czerwony
-        msgDiv.classList.add('system');
-    } 
-    // 2. Sprawdzamy czy to GOSPODARZ (Ruffix22)
-    // Sprawdzamy po nicku lub po fladze isHost jeśli ją przesyłasz
-    else if (sender === 'Gospodarz' || sender === 'GOSPODARZ') {
-        displaySender = 'GOSPODARZ';
-        senderColor = '#f1c40f'; // Żółty/Złoty
+    // 1. Sprawdzamy czy nadawca jest DUCHEM (martwy z pozwoleniem na mówienie)
+    // Szukamy w cache graczy po ID lub nazwie
+    const senderData = playersCache.find(p => (senderId && p.id === senderId) || p.name === sender);
+    if (senderData && !senderData.alive && senderData.canGhostTalk) {
+        isGhost = true;
+        senderColor = '#00d4ff'; // Neonowy błękit ducha
+        msgDiv.classList.add('ghost-message');
     }
 
-    // 3. Sprawdzanie czy to Twoja własna wiadomość (żeby dociągnąć do prawej)
+    // 2. Sprawdzamy czy to SYSTEM
+    if (type === 'system' || sender === 'System' || sender === 'SYSTEM') {
+        displaySender = 'SYSTEM';
+        senderColor = '#ff4d4d'; 
+        msgDiv.classList.add('system');
+    } 
+    // 3. Sprawdzamy czy to GOSPODARZ
+    else if (sender === 'Gospodarz' || sender === 'GOSPODARZ') {
+        displaySender = 'GOSPODARZ';
+        senderColor = '#f1c40f'; 
+    }
+
+    // 4. Sprawdzanie własnej wiadomości
     const myNickname = nicknameInput ? nicknameInput.value.trim() : "";
     if (sender === myNickname || (isHost && sender === "Gospodarz")) {
         msgDiv.classList.add('own-message');
     }
 
-    // Dodanie logiki klikania dla Hosta (którą wprowadziliśmy wcześniej)
+    // Logika klikania dla Hosta
     if (isHost && type === 'private' && displaySender !== "GOSPODARZ" && senderId) {
         msgDiv.style.border = "1px dashed #777";
         msgDiv.style.cursor = "pointer";
@@ -841,6 +1047,7 @@ function appendMessageToChat(sender, text, type = 'city', senderId = null) {
     }
 
     // --- BUDOWANIE HTML ---
+    // Jeśli to duch, dodajemy poświatę do tekstu za pomocą klasy z CSS
     msgDiv.innerHTML = `
         <span class="message-sender" style="color:${senderColor}; font-weight:${fontWeight}; display:block; text-transform: uppercase; letter-spacing: 1px;">
             ${displaySender}:
@@ -857,7 +1064,7 @@ socket.on('systemMessage', (message) => {
     appendMessageToChat('System', message, 'system');
 });
 
-// 3. WYSYŁANIE
+// 3. WYSYŁANIE (Zaktualizowane o system szeptów Hosta)
 function sendMessage() {
     const msgInput = document.getElementById('message');
     if (!msgInput) return;
@@ -865,11 +1072,11 @@ function sendMessage() {
     const text = msgInput.value.trim();
     if (text === "") return;
 	
-	const me = playersCache.find(ptr => ptr.id === playerId);
-	if (me && !me.alive && !me.canGhostTalk) {
-		appendMessageToChat('System', 'Nie żyjesz - nie możesz pisać na czacie miasta!', 'system');
+    const me = playersCache.find(ptr => ptr.id === playerId);
+    if (me && !me.alive && !me.canGhostTalk) {
+        appendMessageToChat('System', 'Nie żyjesz - nie możesz pisać na czacie miasta!', 'system');
         return;
-	}
+    }
 
     const activeTabBtn = document.querySelector('.tab-btn.active');
     const chatType = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'city';
@@ -879,14 +1086,16 @@ function sendMessage() {
     // Budujemy obiekt danych
     const payload = { 
         msg: text, 
-        from: myName, 
+        // Jeśli jesteś hostem, wysyłaj jako "Gospodarz", w innym przypadku użyj imienia
+        from: isHost ? "Gospodarz" : myName, 
         type: chatType 
     };
 
     // Jeśli Host jest na zakładce prywatnej, dodajemy ID celu
     if (isHost && chatType === 'private') {
         if (!currentWhisperTarget) {
-            appendMessageToChat('System', 'Kliknij najpierw wiadomość gracza, któremu chcesz odpisać!', 'system');
+            // Zmieniliśmy treść komunikatu, bo teraz można też wybrać gracza z panelu
+            appendMessageToChat('System', 'Wybierz gracza z panelu (zębatka) lub kliknij jego wiadomość, by szepnąć!', 'system');
             return;
         }
         payload.to = currentWhisperTarget;
@@ -1030,6 +1239,21 @@ if (misfireBtn) {
     };
 }
 
+socket.on('updateConfusionState', (state) => {
+    const btn = document.getElementById('misfire-btn');
+    if (btn) {
+        if (state) {
+            btn.style.filter = 'drop-shadow(0 0 20px #00ffcc)'; // Morski Akwamaryn
+            btn.style.transform = 'scale(1.3)';
+            btn.style.opacity = '1';
+        } else {
+            btn.style.filter = 'none';
+            btn.style.transform = 'scale(1)';
+            btn.style.opacity = '0.5';
+        }
+    }
+});
+
 function showCardMenu(targetId) {
     if (!isHost) return;
 
@@ -1072,53 +1296,75 @@ function showCardMenu(targetId) {
     menu.appendChild(contentWrapper);
 
     const cards = [
+		{id:'ally', name:'Sojusznik', type: 'private', targetRole: 'both'},
         {id:'anarchist', name:'Anarchista', type: 'public', targetRole: 'both'},
-        {id:'doctor', name:'Lekarz', type: 'private', targetRole: 'city'},
-        {id:'forced_sacrifice', name:'Wymuszona Ofiara', type: 'public', targetRole: 'both'},
-        {id:'blood_legacy', name:'Dziedzictwo Krwi', type: 'public', targetRole: 'mafia'},
-        {id:'kamikaze', name:'Kamikadze', type: 'public', targetRole: 'both'},
-        {id:'delayed_poison', name:'Opóźniona Trucizna', type: 'public', targetRole: 'both'},
-        {id:'ally', name:'Sojusznik', type: 'private', targetRole: 'both'},
-        {id:'silence_card', name:'Wyciszenie', type: 'public', targetRole: 'both'},
-        {id:'power_for_selected', name:'Moc Dla Wybranych', type: 'public', targetRole: 'both'},
-        {id:'misfire', name:'Błędny Strzał', type: 'private', targetRole: 'city'},
-        {id:'support', name:'Wsparcie', type: 'private', targetRole: 'city'},
-        {id:'in_broad_daylight', name:'W Biały Dzień', type: 'public', targetRole: 'mafia'},
-        {id:'silent_sabotage', name:'Zmowa Milczenia', type: 'private', targetRole: 'mafia'},
-        {id:'tribunal_of_state', name:'Trybunał Stanu', type: 'public', targetRole: 'both'},
-        {id:'suspect_profile', name:'Profil Podejrzanego', type: 'public', targetRole: 'both'},
-        {id:'investigative_report', name:'Raport Śledczy', type: 'private', targetRole: 'city'},
-        {id:'madman', name:'Szaleniec', type: 'private', targetRole: 'both'},
-        {id:'lovers', name:'Anioł Miłości', type: 'private', targetRole: 'both'},
-        {id:'full_moon', name:'Pełnia Księżyca', type: 'private', targetRole: 'both'},
-        {id:'bodyguard', name:'Ochroniarz', type: 'public', targetRole: 'both'},
-        {id:'don_decision', name:'Decyzja Dona', type: 'public', targetRole: 'both'},
-		{id:'spiritual_seance', name:'Seans Spirytystyczny', type: 'public', targetRole: 'both'},
-        {id:'chosen_of_dead', name:'Wybraniec Umarłych', type: 'public', targetRole: 'both'},
-        {id:'delayed_execution', name:'Oddalona Egzekucja', type: 'public', targetRole: 'both'},
-        {id:'purification', name:'Oczyszczenie', type: 'public', targetRole: 'city'},
-        {id:'untouchable', name:'Nietykalny', type: 'private', targetRole: 'city'},
-        {id:'miracle_worker', name:'Cudotwórca', type: 'public', targetRole: 'both'},
-        {id:'sniper', name:'Snajper', type: 'public', targetRole: 'both'},
-        {id:'cancel_power', name:'Karta Anulacji Mocy', type: 'public', targetRole: 'both'},
-        {id:'avenger', name:'Mściciel', type: 'public', targetRole: 'both'},
-        {id:'uncertain_info', name:'Niepewna Informacja', type: 'private', targetRole: 'city'},
-        {id:'fair_judge', name:'Sprawiedliwy Sędzia', type: 'public', targetRole: 'both'},
-        {id:'crown_witness', name:'Świadek Koronny', type: 'public', targetRole: 'both'},
-        {id:'fog_of_war', name:'Mgła Wojny', type: 'private', targetRole: 'mafia'},
-        {id:'recruit', name:'Rekrut', type: 'private', targetRole: 'both'},
-        {id:'citizen_rep', name:'Przedstawiciel Obywateli', type: 'public', targetRole: 'both'},
-        {id:'tribune', name: 'Trybuna Umarłych', type: 'public', targetRole: 'both' },
-        {id:'boss_mama', name:'Boss Mama', type: 'public', targetRole: 'both'},
-		{id:'veto', name:'Veto', type: 'public', targetRole: 'both'},
-		{id:'common_interest', name:'Wspólny Interes', type: 'private', targetRole: 'city'}, 
-		{id:'false_evidence', name:'Fałszywy Trop', type: 'private', targetRole: 'mafia'},
-		{id:'godfather', name:'Ojciec Chrzestny', type: 'private', targetRole: 'mafia'},
-		{id:'gambler', name:'Hazardzista', type: 'private', targetRole: 'both'},
+		{id:'archive_leak', name:'Przeciek z Archiwum', type: 'private', targetRole: 'city'},
+		{id:'avenger', name:'Mściciel', type: 'public', targetRole: 'both'},
+		{id:'blood_legacy', name:'Dziedzictwo Krwi', type: 'public', targetRole: 'mafia'},
+		{id:'bodyguard', name:'Ochroniarz', type: 'public', targetRole: 'both'},
+		{id:'boss_mama', name:'Boss Mama', type: 'public', targetRole: 'both'},
+		{id:'blackmailer', name:'Szantażysta', type: 'private', targetRole: 'mafia'},
+		{id:'cancel_power', name:'Karta Anulacji Mocy', type: 'public', targetRole: 'both'},
+		{id:'chosen_of_dead', name:'Wybraniec Umarłych', type: 'public', targetRole: 'both'},
+		{id:'citizen_rep', name:'Przedstawiciel Obywateli', type: 'public', targetRole: 'both'},
+		{id:'common_interest', name:'Wspólny Interes', type: 'private', targetRole: 'city'},
+		{id:'confiscation', name:'Konfiskata', type: 'public', targetRole: 'both'},
+		{id:'corrupt_cop', name:'Skorumpowany Gliniarz', type: 'public', targetRole: 'both'},
+		{id:'crown_witness', name:'Świadek Koronny', type: 'public', targetRole: 'both'},
 		{id:'dark_pact', name:'Mroczny Pakt', type: 'private', targetRole: 'both'},
+		{id:'delayed_execution', name:'Oddalona Egzekucja', type: 'public', targetRole: 'both'},
+		{id:'delayed_poison', name:'Opóźniona Trucizna', type: 'public', targetRole: 'both'},
+		{id:'doctor', name:'Lekarz', type: 'private', targetRole: 'city'},
+		{id:'don_decision', name:'Decyzja Dona', type: 'public', targetRole: 'both'},
+		{id:'duplication', name:'Cynk od Informatora', type: 'public', targetRole: 'both'},
+		{id:'fair_judge', name:'Sprawiedliwy Sędzia', type: 'public', targetRole: 'both'},
+		{id:'faked_death', name:'Upozorowana Śmierć', type: 'private', targetRole: 'both'},
+		{id:'false_evidence', name:'Fałszywy Trop', type: 'private', targetRole: 'mafia'},
+		{id:'final_judgement', name:'Sąd Ostateczny', type: 'public', targetRole: 'both'},
+		{id:'fog_of_war', name:'Mgła Wojny', type: 'private', targetRole: 'mafia'},
+		{id:'forced_sacrifice', name:'Wymuszona Ofiara', type: 'public', targetRole: 'both'},
+        {id:'full_moon', name:'Pełnia Księżyca', type: 'private', targetRole: 'both'},
+		{id:'gambler', name:'Hazardzista', type: 'private', targetRole: 'both'},
+		{id:'godfather', name:'Ojciec Chrzestny', type: 'private', targetRole: 'mafia'},
+		{id:'grove_whisper', name:'Grobowy Szept', type: 'public', targetRole: 'both'},
+		{id:'hidden_victim', name:'Ukryta Ofiara', type: 'private', targetRole: 'mafia'},
+		{id:'in_broad_daylight', name:'W Biały Dzień', type: 'public', targetRole: 'mafia'},
+		{id:'investigative_report', name:'Raport Śledczy', type: 'private', targetRole: 'city'},
+		{id:'iron_alibi', name:'Żelazne Alibi', type: 'private', targetRole: 'both'},
+		{id:'jury', name:'Ława Przysięgłych', type: 'private', targetRole: 'both'},
+		{id:'kamikaze', name:'Kamikadze', type: 'public', targetRole: 'both'},
+		{id:'last_will', name:'Ostatnia Wola', type: 'private', targetRole: 'both'},
+		{id:'lazarus_protocol', name:'Protokół Łazarz', type: 'public', targetRole: 'both'},
+		{id:'life_insurance', name:'Polisa na Życie', type: 'private', targetRole: 'both'},
+		{id:'list_of_the_damned', name:'Lista Potępionych', type: 'public', targetRole: 'both'},
+		{id:'logistical_support', name:'Wsparcie Logistyczne', type: 'private', targetRole: 'both'},
+		{id:'lovers', name:'Anioł Miłości', type: 'private', targetRole: 'both'},
+        {id:'luck_shot', name:'Łut Szczęścia', type: 'public', targetRole: 'both'},
+        {id:'madman', name:'Szaleniec', type: 'private', targetRole: 'both'},
+        {id:'miracle_worker', name:'Cudotwórca', type: 'public', targetRole: 'both'},
+        {id:'misfire', name:'Błędny Strzał', type: 'private', targetRole: 'city'},
+		{id:'poison_blade', name:'Zatrute Ostrze', type: 'private', targetRole: 'mafia'},
+		{id:'power_for_selected', name:'Moc Dla Wybranych', type: 'public', targetRole: 'both'},
+		{id:'power_theft', name:'Kradzież Mocy', type: 'public', targetRole: 'both'},
+		{id:'purification', name:'Oczyszczenie', type: 'public', targetRole: 'city'},
 		{id:'rebound', name:'Rykoszet', type: 'private', targetRole: 'both'},
-		{id:'last will', name:'Ostatnia Wola', type: 'private', targetRole: 'both'},
-		{id:'voice_of_reason', name:'Głos Rozsądku', type: 'private', targetRole: 'both'}
+		{id:'recruit', name:'Rekrut', type: 'private', targetRole: 'both'},
+		{id:'rigged_vote', name:'Fałszywy Wynik', type: 'private', targetRole: 'mafia'},
+		{id:'second_chance', name:'Druga Szansa', type: 'public', targetRole: 'both'},
+		{id:'secret_alliance', name:'Tajne Porozumienie', type: 'private', targetRole: 'city'},
+		{id:'silence_card', name:'Wyciszenie', type: 'public', targetRole: 'both'},
+        {id:'silent_sabotage', name:'Zmowa Milczenia', type: 'private', targetRole: 'mafia'},
+        {id:'sniper', name:'Snajper', type: 'public', targetRole: 'both'},
+        {id:'spiritual_seance', name:'Seans Spirytystyczny', type: 'public', targetRole: 'both'},
+		{id:'spying', name:'Echo Zamachu', type: 'private', targetRole: 'city'},
+		{id:'support', name:'Wsparcie', type: 'private', targetRole: 'city'},
+        {id:'suspect_profile', name:'Profil Podejrzanego', type: 'public', targetRole: 'both'},
+        {id:'tribunal_of_state', name:'Trybunał Stanu', type: 'public', targetRole: 'both'},
+        {id:'tribune', name: 'Trybuna Umarłych', type: 'public', targetRole: 'both' },
+        {id:'uncertain_info', name:'Niepewna Informacja', type: 'private', targetRole: 'city'},
+        {id:'untouchable', name:'Nietykalny', type: 'private', targetRole: 'city'},
+        {id:'veto', name:'Veto', type: 'public', targetRole: 'both'},
+        {id:'voice_of_reason', name:'Głos Rozsądku', type: 'private', targetRole: 'both'}
     ];
 
     // --- KROK 1: WYBÓR FRAKCJI ---
@@ -1298,7 +1544,7 @@ socket.on('updateBossMamaState', (state) => {
     const btn = document.getElementById('boss-mama-btn');
     if (btn) {
         if (state) {
-            btn.style.filter = 'drop-shadow(0 0 10px #ff00ff)'; // Różowa/fioletowa poświata
+            btn.style.filter = 'drop-shadow(0 0 20px #9b59b6)'; // Królewski Ametyst
             btn.style.transform = 'scale(1.3)';
             btn.style.opacity = '1';
         } else {
@@ -1307,6 +1553,42 @@ socket.on('updateBossMamaState', (state) => {
             btn.style.opacity = '0.5';
         }
     }
+});
+
+const poisonBladeBtn = document.getElementById('poison-blade-btn');
+
+if (poisonBladeBtn) {
+    poisonBladeBtn.onclick = () => {
+        // To wysyła sygnał do serwera, żeby przełączyć stan trucizny
+        socket.emit('togglePoisonBlade');
+    };
+}
+
+socket.on('updatePoisonBladeState', (state) => {
+    const btn = document.getElementById('poison-blade-btn'); // Upewnij się, że masz takie ID w HTML
+    if (btn) {
+        if (state) {
+            btn.style.filter = 'drop-shadow(0 0 20px #2ecc71)'; // Jadowita zieleń
+            btn.style.transform = 'scale(1.3)';
+            btn.style.opacity = '1';
+        } else {
+            btn.style.filter = 'none';
+            btn.style.transform = 'scale(1)';
+            btn.style.opacity = '0.5';
+        }
+    }
+});
+
+const graveWhisperBtn = document.getElementById('grave-whisper-btn');
+if (graveWhisperBtn) {
+    graveWhisperBtn.onclick = () => socket.emit('toggleGraveWhisper');
+}
+
+socket.on('updateGraveWhisperState', (state) => {
+    const btn = document.getElementById('grave-whisper-btn');
+    if (!btn) return;
+    btn.style.filter = state ? 'drop-shadow(0 0 15px #9b59b6)' : 'none';
+    btn.style.opacity = state ? '1' : '0.5';
 });
 
 // Kliknięcie
@@ -1320,7 +1602,7 @@ socket.on('updateJudgeState', (state) => {
     const btn = document.getElementById('judge-btn');
     if (btn) {
         if (state) {
-            btn.style.filter = 'drop-shadow(0 0 10px #ffeb3b)'; // Żółta poświata
+            btn.style.filter = 'drop-shadow(0 0 20px #3498db)'; // Głęboki Szafir
             btn.style.transform = 'scale(1.3)';
             btn.style.opacity = '1';
         } else {
@@ -1331,10 +1613,79 @@ socket.on('updateJudgeState', (state) => {
     }
 });
 
+socket.on('notificationBlackmail', (data) => {
+    // 1. Jeśli okno już istnieje, nie twórz go drugi raz
+    if (document.getElementById('blackmail-notif-overlay')) return;
+
+    console.log("Otrzymano szantaż na cel:", data.targetName);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'blackmail-notif-overlay';
+    // Dodajemy stałe style w JS, aby mieć pewność, że nic ich nie nadpisze
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.95);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 999999; 
+        backdrop-filter: blur(10px);
+    `;
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="
+            border: 3px solid #e74c3c; 
+            padding: 30px; 
+            max-width: 500px; 
+            background: #111; 
+            color: white; 
+            text-align: center;
+            box-shadow: 0 0 50px rgba(231, 76, 60, 0.5);
+            pointer-events: auto;
+        ">
+            <h1 style="color: #e74c3c; font-family: 'Garamond', serif; letter-spacing: 3px;">WYROK SZANTAŻU</h1>
+            <p style="font-size: 1.2em;">Twoim przymusowym celem jest:</p>
+            <h2 style="color: #f1c40f; font-size: 2.5em; margin: 20px 0;">${data.targetName}</h2>
+            <p style="color: #bbb; font-style: italic; border-left: 3px solid #e74c3c; padding-left: 15px; text-align: left;">
+                "Musisz zrobić wszystko, by gracz ${data.targetName} został wygłosowany. Każda próba buntu przy urnie zakończy się unieważnieniem Twojego głosu."
+            </p>
+            <button id="close-blackmail-btn" style="
+                background: #e74c3c; 
+                color: white; 
+                border: none; 
+                padding: 15px 30px; 
+                margin-top: 25px; 
+                cursor: pointer; 
+                font-weight: bold;
+                width: 100%;
+                text-transform: uppercase;
+            ">Przyjmuję do wiadomości</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Ręczne podpięcie zdarzenia usuwania, aby uniknąć problemów z inline onclick
+    document.getElementById('close-blackmail-btn').onclick = () => {
+        console.log("Zamykanie powiadomienia o szantażu");
+        overlay.remove();
+    };
+});
+
 socket.on('coinResult', (data) => {
     const overlay = document.getElementById('coin-overlay');
     const coin = document.getElementById('coin-visual');
-	const resultText = document.getElementById('coin-result-text');
+    const resultText = document.getElementById('coin-result-text');
+    const front = document.querySelector('.coin-front');
+    const back = document.querySelector('.coin-back');
+	
+    if (data.type === 'luck') {
+        front.innerText = "Szczęście";
+        back.innerText = "Pech";
+    } else {
+        front.innerText = "Łaska";
+        back.innerText = "Wyrok";
+    }
     
 	// 1. Przygotuj widok
     overlay.style.display = 'flex';
@@ -1361,7 +1712,9 @@ socket.on('coinResult', (data) => {
         const div = document.createElement('div');
         div.style.color = data.color;
         div.style.textAlign = 'center';
-        div.innerHTML = `🪙 MONETA: <b>${data.result}</b>`;
+        div.style.padding = '5px';
+        div.style.borderBottom = `1px solid ${data.color}33`;
+        div.innerHTML = `<b>${data.chatLabel}</b>`; // Używamy gotowej etykiety z serwera
         chatCity.appendChild(div);
         chatCity.scrollTop = chatCity.scrollHeight;
 		
@@ -1389,7 +1742,7 @@ socket.on('syncWheelSpin', (data) => {
             const winner = data.alivePlayers[winnerIndex];
 
             winnerText.innerText = `WYBRANIEC: ${winner.name}`;
-            winnerText.style.color = "#5c1cff";
+            winnerText.style.color = winner.alive ? "#2ecc71" : "#e74c3c";
 
             if (isHost) {
                 // Host informuje czat o wyniku
@@ -1440,8 +1793,8 @@ socket.on('updateFullMoonState', (state) => {
     const btn = document.getElementById('full-moon-btn');
     if (btn) {
         if (state) {
-            btn.style.filter = 'drop-shadow(0 0 10px #f1c40f)';
-            btn.style.transform = 'scale(1.3)'; // Dodaj to dla spójności z innymi ikonami
+            btn.style.filter = 'drop-shadow(0 0 20px #e67e22)'; // Ognisty Bursztyn
+            btn.style.transform = 'scale(1.3)';
             btn.style.opacity = '1';
         } else {
             btn.style.filter = 'none';
@@ -1467,7 +1820,7 @@ socket.on('updateDelayedExecutionState', (state) => {
     const btn = document.getElementById('delayed-exec-btn');
     if (btn) {
         if (state) {
-            btn.style.filter = 'drop-shadow(0 0 10px #e74c3c)'; // Czerwona poświata (kolor Mafii)
+            btn.style.filter = 'drop-shadow(0 0 20px #e74c3c)'; // Krwawy Rubin
             btn.style.transform = 'scale(1.3)';
             btn.style.opacity = '1';
         } else {
@@ -1490,6 +1843,18 @@ socket.on('youAreInLove', ({ loverName, loverRole }) => {
 });
 
 socket.on('deadTalkStatus', (isActive) => {
+	const talkBtn = document.getElementById('dead-talk-btn');
+    if (talkBtn) {
+        if (isActive) {
+            talkBtn.style.filter = 'drop-shadow(0 0 20px #a29bfe)'; // Eteryczny Kwarc
+            talkBtn.style.transform = 'scale(1.3)';
+            talkBtn.style.opacity = '1';
+        } else {
+            talkBtn.style.filter = 'none';
+            talkBtn.style.transform = 'scale(1)';
+            talkBtn.style.opacity = '0.5';
+        }
+    }
 	deadTalkActive = isActive;
 	const chatContainer = document.getElementById('chat-container'); // upewnij się, że masz takie ID
 	chatContainer.classList.remove('phase-day-chat', 'phase-night-chat', 'dead-talk-active');
@@ -1522,14 +1887,14 @@ function createHostActionIcon(id, action, label, fileName) {
             display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; width: 100px;
         " onmouseover="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='scale(1)'">
             <div style="
-                width: 80px; height: 80px; 
+                width: 100px; height: 100px; 
                 background-image: url('icons/${fileName}'); 
                 background-size: contain; background-repeat: no-repeat; background-position: center;
                 border: 2px solid #c5a05944; border-radius: 12px; background-color: #222;
                 margin-bottom: 8px; box-shadow: 0 6px 12px rgba(0,0,0,0.6);
             "></div>
             <span style="
-                font-size: 13px; 
+                font-size: 16px; 
                 color: #c5a059; 
                 text-transform: uppercase; 
                 text-align: center; 
@@ -1558,14 +1923,15 @@ window.openHostPanel = function(targetId) {
     // Budujemy zawartość panelu (Modal)
     // Fragment wewnątrz window.openHostPanel w app.js
     overlay.innerHTML = `
-        <div style="background: #1a1a1a; border: 2px solid #c5a059; padding: 30px; border-radius: 20px; width: 550px; color: white; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
+        <div style="background: #1a1a1a; border: 2px solid #c5a059; padding: 40px; border-radius: 20px; width: 850px; color: white; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
             <h2 style="color: #c5a059; margin-top: 0; text-align: center; font-family: 'Garamond', serif; letter-spacing: 3px; font-size: 28px; text-transform: uppercase;">
 			    ZARZĄDZANIE: ${p.name}
 			</h2>
         
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 30px; justify-items: center;">
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-top: 30px; justify-items: center;">
             
                 ${createHostActionIcon('kill', `socket.emit('toggleAlive', '${p.id}', '${playerId}')`, 'Stan', 'skull.png')}
+				${createHostActionIcon('whisper', `initiateWhisper('${p.id}', '${p.name}')`, 'Szept', 'mail.png')}
                 ${createHostActionIcon('protect', `socket.emit('toggleProtect', '${p.id}')`, 'Tarcza', 'shield.png')}
                 ${createHostActionIcon('role', `socket.emit('changeRole', '${p.id}', '${playerId}')`, 'Rola', 'refresh.png')}
                 ${createHostActionIcon('reveal', `socket.emit('hostRevealRole', '${p.id}')`, 'Ujawnij', 'lightbulb.png')}
@@ -1580,6 +1946,8 @@ window.openHostPanel = function(targetId) {
             
                 ${createHostActionIcon('eye', `handleEyeClick('${p.id}')`, 'Karty', 'eye.png')}
                 ${createHostActionIcon('power', `showCardMenu('${p.id}')`, 'Moc', 'cards.png')}
+				${createHostActionIcon('draft', `socket.emit('sendDraft', {targetId: '${p.id}', hostId: playerId})`, 'Dar Losu', 'gift.png')}
+				${createHostActionIcon('blackmail', `openBlackmailMenu('${p.id}')`, 'Szantaż', 'blackmail.png')} ${/* 👈 NOWA IKONA */ ''}
                 ${createHostActionIcon('mute', `socket.emit('toggleMute', {playerId: '${p.id}', muted: ${!p.isMuted}})`, p.isMuted ? 'Odcisz' : 'Wycisz', 'mute.png')}
 				${createHostActionIcon('love', `handleLoveClick('${p.id}')`, p.isInLove ? 'Rozbij parę' : (firstLoverId === p.id ? 'Czeka...' : 'Połącz w parę'), 'heart.png')}
                 ${createHostActionIcon('double', `socket.emit('toggleDoubleVote', '${p.id}')`, 'Głos x2', 'scales.png')}
@@ -1599,6 +1967,30 @@ window.openHostPanel = function(targetId) {
         const el = document.getElementById('host-panel-overlay');
         if (el) el.remove();
     };
+};
+
+window.initiateWhisper = function(targetId, targetName) {
+    // 1. Ustawiamy cel szeptu dla Hosta
+    currentWhisperTarget = targetId;
+
+    // 2. Znajdujemy zakładkę szeptów i symulujemy kliknięcie, aby ją aktywować
+    const privateTab = document.querySelector('.tab-btn[data-tab="private"]');
+    if (privateTab) {
+        privateTab.click();
+    }
+
+    // 3. Zmieniamy placeholder w polu wpisywania, żebyś wiedział do kogo piszesz
+    const messageInput = document.getElementById('message');
+    if (messageInput) {
+        messageInput.placeholder = `Szepczesz do: ${targetName}...`;
+        messageInput.focus(); // Ustawiamy kursor od razu w polu tekstowym
+    }
+
+    // 4. Informacja systemowa dla Ciebie (opcjonalnie)
+    appendMessageToChat('System', `Rozpoczynasz prywatną rozmowę z: ${targetName}`, 'system');
+
+    // 5. Zamykamy panel zarządzania
+    closeHostPanel();
 };
 
 window.handleLoveClick = function(id) {
@@ -1659,6 +2051,71 @@ if (notebookArea) {
     };
 }
 
+// app.js - nasłuchiwanie na propozycję draftu
+socket.on('receiveDraft', (data) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'draft-overlay';
+    overlay.style.zIndex = "30000";
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="background: transparent; border: none; text-align: center;">
+            <h2 style="color: #f1c40f; text-shadow: 0 0 15px #f1c40f; font-size: 30px; margin-bottom: 30px;">DAR LOSU</h2>
+            <p style="color: white; margin-bottom: 40px;">Gospodarz wystawia Twoje szczęście na próbę... Wybierz jedną kartę.</p>
+            
+            <div style="display: flex; gap: 40px; justify-content: center;">
+                <div class="draft-card" onclick="pickDraftCard('${data.options[0]}', 0)" id="draft-0">
+                    <div class="card-back"></div>
+                </div>
+                <div class="draft-card" onclick="pickDraftCard('${data.options[1]}', 1)" id="draft-1">
+                    <div class="card-back"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+});
+
+// Funkcja wyboru karty
+window.pickDraftCard = function(cardId, index) {
+    const selectedCard = document.getElementById(`draft-${index}`);
+    const otherCard = document.getElementById(index === 0 ? 'draft-1' : 'draft-0');
+
+    // 1. Animacja: Druga karta znika
+    if (otherCard) {
+        otherCard.style.opacity = "0";
+        otherCard.style.transform = "scale(0.8)";
+        otherCard.style.pointerEvents = "none";
+    }
+
+    // 2. Animacja: Wybrana karta obraca się i pokazuje co to za karta
+    const cardBack = selectedCard.querySelector('.card-back');
+    
+    // Ustawiamy grafikę karty
+    cardBack.style.backgroundImage = `url('cards/${cardId}.png')`;
+    
+    // KLUCZOWE POPRAWKI:
+    // Obracamy całą kartę o 180 stopni w 3D
+    selectedCard.style.transform = "scale(1.1) rotateY(180deg)";
+    
+    // Obracamy samo tło o -180 stopni, aby zniwelować lustrzane odbicie
+    cardBack.style.transform = "rotateY(180deg)"; 
+    
+    selectedCard.style.filter = "brightness(1.2) drop-shadow(0 0 20px gold)";
+
+    // 3. Po 2 sekundach informujemy serwer i zamykamy okno
+    setTimeout(() => {
+        socket.emit('acceptDraftCard', cardId); // Wysyłamy ID wybranej karty
+        
+        const overlay = document.getElementById('draft-overlay');
+        if (overlay) {
+            overlay.style.opacity = "0";
+            overlay.style.transition = "opacity 0.5s ease";
+            setTimeout(() => overlay.remove(), 500);
+        }
+    }, 2000);
+};
+
 //////////////////////////////////////////////////////
 // 🔥 OBSŁUGA PRZYCISKU GOTOWOŚCI (SKIP TIMER)
 //////////////////////////////////////////////////////
@@ -1685,7 +2142,43 @@ socket.on('updateReadyCount', (count, total) => {
     }
 });
 
-// app.js
+// === LOGIKA PANELU HOSTA (KATEGORIE) ===
+// Ten kod musi być w app.js, bo operuje na DOM (widoku przeglądarki)
+
+document.querySelectorAll('.category-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        const group = trigger.parentElement;
+        const isActive = group.classList.contains('active');
+
+        // Zamykamy inne otwarte kategorie
+        document.querySelectorAll('.category-group').forEach(g => {
+            g.classList.remove('active');
+        });
+
+        // Jeśli kliknięta nie była aktywna, otwórz ją
+        if (!isActive) {
+            group.classList.add('active');
+        }
+    });
+});
+
+// Zamykanie szuflady po wybraniu konkretnej mocy (opcjonalne, ale poprawia UX)
+document.querySelectorAll('.host-side-icon').forEach(icon => {
+    icon.addEventListener('click', () => {
+        document.querySelectorAll('.category-group').forEach(g => {
+            g.classList.remove('active');
+        });
+    });
+});
+
+// Zamykanie szuflad po kliknięciu gdziekolwiek indziej na ekranie
+document.addEventListener('click', () => {
+    document.querySelectorAll('.category-group').forEach(g => {
+        g.classList.remove('active');
+    });
+});
 
 // Funkcja wyświetlająca wielki napis na środku ekranu
 function showLoveNotification() {
@@ -1738,6 +2231,32 @@ socket.on('phaseChanged', (phase) => {
         skipBtn.style.opacity = "1";
     }
 });
+
+const rigVotingBtn = document.getElementById('rig-voting-btn');
+if (rigVotingBtn) {
+    rigVotingBtn.onclick = () => socket.emit('toggleRigVoting');
+}
+
+socket.on('updateRigVotingState', (state) => {
+    const btn = document.getElementById('rig-voting-btn');
+    if (!btn) return;
+    btn.style.filter = state ? 'drop-shadow(0 0 15px #e74c3c)' : 'none'; // Czerwona poświata
+    btn.style.opacity = state ? '1' : '0.5';
+});
+
+const hiddenVictimBtn = document.getElementById('hidden-victim-btn');
+if (hiddenVictimBtn) {
+    hiddenVictimBtn.onclick = () => socket.emit('toggleHiddenVictim');
+}
+
+socket.on('updateHiddenVictimState', (state) => {
+    const btn = document.getElementById('hidden-victim-btn');
+    if (!btn) return;
+    btn.style.filter = state ? 'drop-shadow(0 0 20px #f1c40f)' : 'none'; // Złota poświata
+    btn.style.transform = state ? 'scale(1.3)' : 'scale(1)';
+    btn.style.opacity = state ? '1' : '0.5';
+});
+
 socket.on('updateCards', cards => {
     const cardsPanel = document.getElementById('cards-panel');
     const infoPanel = document.getElementById('card-info-panel');
@@ -1805,7 +2324,7 @@ socket.on('updateCards', cards => {
 
         div.onclick = async () => {
             if (isHost) {
-                addMessage("Gospodarz", "Tylko podglądasz te karty. Nie możesz ich użyć.", "system");
+                appendMessageToChat("System", "Tylko podglądasz te karty. Nie możesz ich użyć.", "system");
                 return;
             }
             const me = playersCache.find(p => p.id === playerId);
@@ -1813,14 +2332,55 @@ socket.on('updateCards', cards => {
                 await showModal("Błąd!", "Umarli nie mogą używać kart mocy!", false);
                 return;
             }
-            const confirmed = await showModal("Użycie karty", `Czy na pewno chcesz użyć: ${c.name}?`);
-            if (confirmed) {
-                socket.emit('useCard', { playerId, cardId: c.id });
-                if(infoPanel) {
-                    infoPanel.innerHTML = '';
-                    infoPanel.style.background = 'none';
-                }
-            }
+
+            // --- NOWA LOGIKA MODALA Z GRAFIKĄ I ANIMACJAMI ---
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.id = 'card-use-overlay';
+            overlay.style.zIndex = "20000";
+
+            overlay.innerHTML = `
+                <div class="modal-content" style="background: transparent; border: none; box-shadow: none; display: flex; flex-direction: column; align-items: center;">
+                    <div id="big-card-preview" class="modal-card-preview" 
+                         style="background-image: url('cards/${c.id}.png')">
+                    </div>
+                    
+                    <div style="background: rgba(20,20,20,0.95); padding: 25px; border-radius: 15px; border: 2px solid #5c1cff; backdrop-filter: blur(10px); min-width: 300px;">
+                        <h3 style="margin-top:0; color: white;">Użyć karty: ${c.name}?</h3>
+                        <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="confirm-use-btn" class="win-btn city" style="background: #27ae60; padding: 10px 20px;">TAK, UŻYJ</button>
+                            <button id="cancel-use-btn" class="cancel-btn" style="background: #444; padding: 10px 20px;">ANULUJ</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const bigCard = document.getElementById('big-card-preview');
+
+            // OBSŁUGA: TAK, UŻYJ
+            document.getElementById('confirm-use-btn').onclick = () => {
+                bigCard.classList.add('card-anim-use');
+                
+                setTimeout(() => {
+                    socket.emit('useCard', { playerId, cardId: c.id });
+                    if(infoPanel) {
+                        infoPanel.innerHTML = '';
+                        infoPanel.style.background = 'none';
+                    }
+                    overlay.remove();
+                }, 700);
+            };
+
+            // OBSŁUGA: ANULUJ
+            document.getElementById('cancel-use-btn').onclick = () => {
+                bigCard.classList.add('card-anim-return');
+                
+                setTimeout(() => {
+                    overlay.remove();
+                }, 500);
+            };
         };
 
         cardsPanel.appendChild(div);

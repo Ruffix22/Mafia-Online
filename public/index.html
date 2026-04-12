@@ -48,15 +48,42 @@
 	<button id="end-game-btn" title="Zakończ Grę">🏁</button>
 </div>
 
-<div id="coin-toss-container" style="display: flex; flex-direction: column; align-items: center;">
-    <div id="coin-btn" title="Rzut monetą">🪙</div>
-    <div id="wheel-btn" title="Koło Fortuny">🎲</div>
-	<div id="misfire-btn" title="Błędny Strzał">🌀</div>
-	<div id="boss-mama-btn" title="Boss Mama">💃</div>
-	<div id="full-moon-btn" title="Pełnia Księżyca">🌕</div>
-	<div id="judge-btn" title="Sprawiedliwy Sędzia">⚖️</div>
-	<div id="delayed-exec-btn" title="Oddalona Egzekucja">🎭</div>
-    <div id="dead-talk-btn" title="Trybuna Umarłych">☠️</div>
+<div id="coin-toss-container">
+    <div class="category-group">
+        <div class="category-trigger">Globalne</div>
+        <div class="category-content">
+            <div id="coin-btn" class="host-side-icon" title="Rzut monetą"></div>
+            <div id="wheel-btn" class="host-side-icon" title="Koło Fortuny"></div>
+            <div id="boss-mama-btn" class="host-side-icon" title="Boss Mama"></div>
+            <div id="misfire-btn" class="host-side-icon" title="Błędny Strzał"></div>
+        </div>
+    </div>
+
+    <div class="category-group">
+        <div class="category-trigger">Ofensywne</div>
+        <div class="category-content">
+            <div id="full-moon-btn" class="host-side-icon" title="Pełnia Księżyca"></div>
+            <div id="poison-blade-btn" class="host-side-icon" title="Zatrute Ostrze"></div>
+            <div id="hidden-victim-btn" class="host-side-icon" title="Ukryta Ofiara"></div>
+        </div>
+    </div>
+
+    <div class="category-group">
+        <div class="category-trigger">Głosowanie</div>
+        <div class="category-content">
+            <div id="judge-btn" class="host-side-icon" title="Sprawiedliwy Sędzia"></div>
+            <div id="delayed-exec-btn" class="host-side-icon" title="Oddalona Egzekucja"></div>
+            <div id="rig-voting-btn" class="host-side-icon" title="Fałszywy Wynik"></div>
+        </div>
+    </div>
+
+    <div class="category-group">
+        <div class="category-trigger">Umarli</div>
+        <div class="category-content">
+            <div id="dead-talk-btn" class="host-side-icon" title="Trybuna Umarłych"></div>
+            <div id="grave-whisper-btn" class="host-side-icon" title="Grobowy Szept"></div>
+        </div>
+    </div>
 </div>
 
 <div id="player-tools" style="display: flex; align-items: center;"></div>
@@ -71,7 +98,8 @@
 </div>
 
 <div class="main-game-area">
-    <div id="players" class="players"> <h3>❤️ ŻYWI</h3>
+    <div id="players" class="players">
+        <h3>❤️ ŻYWI</h3>
         <div id="alive-players"></div>
 
         <h3 style="color: #7f8c8d; border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;">🪦 CMENTARZ</h3>
@@ -82,25 +110,33 @@
         <div class="chat-tabs">
             <button class="tab-btn active" data-tab="city">Miasto</button>
             <button class="tab-btn" data-tab="mafia">Mafia</button>
-			<button class="tab-btn" data-tab="private">Szepty (Gospodarz)</button>
+            <button class="tab-btn" data-tab="private">Szepty (Gospodarz)</button>
         </div>
 
         <div id="chat-messages-city" class="chat-messages active"></div>
         <div id="chat-messages-mafia" class="chat-messages"></div>
-		<div id="chat-messages-private" class="chat-messages"></div>
+        <div id="chat-messages-private" class="chat-messages"></div>
 
         <div class="chat-input">
             <input id="message" placeholder="Napisz wiadomość...">
             <button id="send-btn">Wyślij</button>
         </div>
     </div>
-</div> <div id="inventory-center">
-    <div id="cards-panel"></div>
-    <div id="card-info-panel">
-        <div id="card-description-box" class="placeholder-text">Wybierz kartę, aby zobaczyć opis</div>
+
+    <div id="utility-tools">
+        <button id="notebook-btn" title="Prywatny Notatnik">📝</button>
+        <button id="skip-phase-btn" title="Pomiń fazę/Gotowość">
+            <span class="skip-icon">⏭️</span>
+            <span id="ready-counter">0/0</span>
+        </button>
     </div>
 </div>
 
+<div id="inventory-center">
+	<div id="status-effects-container"></div>
+    <div id="card-info-panel"></div>
+	<div id="cards-panel"></div>
+</div>
 <div id="custom-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
         <h3 id="modal-title">Powiadomienie</h3>
@@ -132,14 +168,6 @@
         </div>
         <h2 id="wheel-winner-text"></h2>
     </div>
-</div>
-
-<div id="utility-tools">
-    <button id="notebook-btn" title="Prywatny Notatnik">📝</button>
-    <button id="skip-phase-btn" title="Pomiń fazę/Gotowość">
-        <span class="skip-icon">⏭️</span>
-        <span id="ready-counter">0/0</span>
-    </button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
