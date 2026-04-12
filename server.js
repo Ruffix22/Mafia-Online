@@ -18,15 +18,19 @@ let players = [];
 let currentPhase = 'Dzień';
 let votingActive = false;
 let deadTalkActive = false;
+let graveWhisperActive = false;
 let mafiaTarget = null;
 let confusionActive = false; 
 let judgeActive = false;
 let delayedExecutionActive = false;
 let bossMamaActive = false;
+let poisonBladeActive = false;
 let fullMoonActive = false;
 let pendingSilenceTarget = null; 
 let silentSabotageActive = false;
+let rigVotingActive = false;
 let godfatherId = null; 
+let hiddenVictimActive = false;
 let fogOfWarActive = false;
 let mafiaTargets = []; 
 let votes = {};
@@ -34,59 +38,75 @@ let tribunalTarget = null;
 let tribunalVotes = {}; // { playerId: 'guilty' / 'innocent' }
 let readyPlayers = new Set();
 let cardsDatabase = [
+	{id:'ally', name:'Sojusznik', description:'Gospodarz wskazuje Ci osobę, która jest Mieszkańcem. Nie możesz o tym poinformować innych graczy wprost.', type:'private', roles:['Miasto','Mafia']},
     {id:'anarchist', name:'Anarchista', description:'Wykorzystaj tę kartę by rozpocząć losowanie osoby, która ma zostać natychmiast wyeliminowana z gry. Po losowaniu następuje faza nocy.', type:'public', roles:['Miasto','Mafia']},
-    {id:'doctor', name:'Lekarz', description:'Wskaż Gospodarzowi osobę, którą ochronisz przed wyrokiem Mafii w trakcie najbliższej nocy.', type:'private', roles:['Miasto']},
-    {id:'tribunal_of_state', name:'Trybunał Stanu', description:'Wskaż osobę, która automatycznie trafia przed Sąd Żywych. Miasto decyduje większością głosów czy zostanie wyeliminowana.', type:'public', roles:['Miasto','Mafia']},
-    {id:'forced_sacrifice', name:'Wymuszona Ofiara', description:'Wskaż osobę, która jest eliminowana z rozgrywki, ale może ona na swoje miejsce przywrócić innego, martwego gracza.', type:'public', roles:['Miasto','Mafia']},
-    {id:'kamikaze', name:'Kamikadze', description:'Możesz wyeliminować dowolną osobę z gry, ale ty również zostajesz wyeliminowany.', type:'public', roles:['Miasto','Mafia']},
-    {id:'delayed_poison', name:'Opóźniona Trucizna', description:'Wyeliminuj dowolną osobę, ale przejdzie ona do świata umarłych dopiero następnego dnia rano.', type:'public', roles:['Miasto','Mafia']},
-	{id:'in_broad_daylight', name:'W Biały Dzień', description:'Możesz wyeliminować dowolną osobę, ale natychmiast zostajesz schwytany i opuszczasz rozgrywkę.', type:'public', roles:['Mafia']},
-    {id:'ally', name:'Sojusznik', description:'Gospodarz wskazuje Ci osobę, która jest Mieszkańcem. Nie możesz o tym poinformować innych graczy wprost.', type:'private', roles:['Miasto','Mafia']},
-	{id:'fog_of_war', name:'Mgła Wojny', description:'Podczas najbliższego głosowania licznik głosów będzie widoczny tylko dla Gospodarza.', type:'private', roles:['Mafia']},
-    {id:'silence_card', name:'Wyciszenie', description:'Użycie tej karty blokuje możliwość zagrania jakiejkolwiek innej karty do końca rundy.', type:'public', roles:['Miasto','Mafia']},
-    {id:'power_for_selected', name:'Moc Dla Wybranych', description:'Ty oraz dwie wybrane przez Ciebie osoby otrzymujecie kartę mocy.', type:'public', roles:['Miasto','Mafia']},
-	{id:'spiritual_seance', name:'Seans Spirytystyczny', description:'Wybierz gracza ze Świata Umarłych, który będzie mógł wypowiadać się podczas najbliższej Dyskusji.', type:'public', roles:['Miasto','Mafia']},
-
-    {id:'misfire', name:'Błędny Strzał', description:'Najbliższej nocy osoba wyeliminowana przez mafie jest losowa. Strzał może również trafić w członka mafii.', type:'private', roles:['Miasto','Mafia']},
-    {id:'support', name:'Wsparcie', description:'Wskaż gospodarzowi osobę, z którą będziesz bezpieczny najbliższej nocy.', type:'private', roles:['Miasto','Mafia']},
-    {id:'full_moon', name:'Pełnia Księżyca', description:'Następnej nocy prócz celu wskazanego przez Mafię zginie jeden, losowy Obywatel. W zamian gospodarz ujawnia mieszkańcom tożsamość jednego z mafiozów.', type:'private', roles:['Miasto','Mafia']},
-
-    {id:'bodyguard', name:'Ochroniarz', description:'Wskaż dwie osoby, które nie będą mogły brać udziału w najbliższym głosowaniu. Nie mogą one zostać wyeliminowane w jego trakcie.', type:'public', roles:['Miasto','Mafia']},
-    {id:'don_decision', name:'Decyzja Dona', description:'Musisz zagrać te kartę od razu. Następuje rzut monetą, który decyzuje o tym czy odpadniesz z gry czy przeżyjesz.', type:'public', roles:['Miasto','Mafia']},
-    {id:'chosen_of_dead', name:'Wybraniec Umarłych', description:'Użyj tej karty by przywrócić do świata żywych losowego gracza.', type:'public', roles:['Miasto','Mafia']},
-	{id:'lovers', name:'Anioł Miłości', description:'Wybierz dwóch graczy, aby następnej nocy połączyć ich miłością, silniejszą od przynależności do roli. Jeśli jeden z zakochanych zginie, drugi odpada razem z nim', type:'private', roles:['Miasto','Mafia']},
-
-    {id:'delayed_execution', name:'Oddalona Egzekucja', description:'Zagraj te kartę aby ochronić członka Mafii w najbliższym głosowaniu. Jeśli wskazany gracz jest z Mafii, nie odpada z gry.', type:'public', roles:['Miasto','Mafia']},
-    {id:'untouchable', name:'Nietykalny', description:'Użyj tej karty by otrzymać nietykalność. Nie możesz zostać wyeliminowany następnej nocy przez Mafie.', type:'private', roles:['Miasto','Mafia']},
-    {id:'miracle_worker', name:'Cudotwórca', description:'Wskaż osobę ze Świata Umarłych, która natychmiast powróci do gry.', type:'public', roles:['Miasto','Mafia']},
-    {id:'sniper', name:'Snajper', description:'Wskaż osobę którą chcesz wyeliminować z gry. Jeżeli trafisz Obywatela- odpadasz razem z nim.', type:'public', roles:['Miasto','Mafia']},
-    {id:'cancel_power', name:'Karta Anulacji Mocy', description:'Wskaż gracza, którego zagrana karta mocy straci swoje działanie.', type:'public', roles:['Miasto','Mafia']},
-	{id:'purification', name:'Oczyszczenie', description:'Ujawniasz wszystkim swoją rolę, ale tracisz wszystkie inne karty oraz możliwość oddania głosu.', type:'public', roles:['Miasto']},
-    {id:'avenger', name:'Mściciel', description:'Jeżeli zostałeś wskazany do opuszczenia gry, wskazujesz osobę, która opuści ją zamiast Ciebie.', type:'public', roles:['Miasto','Mafia']},
-	{id:'silent_sabotage', name:'Zmowa Milczenia', description:'Wskaż Gospodarzowi gracza, który ma zostać uciszony następnego dnia. Nie może on rozmawiać ani głosować', type:'private', roles:['Mafia']},
-    {id:'uncertain_info', name:'Niepewna Informacja', description:'Wskaż Gospodarzowi trzy podejrzane osoby a ten poinformuje Cię ilu Mafiozów jest wśród nich. Nie możesz się z nikim podzielić tą informacją.', type:'private', roles:['Miasto','Mafia']},
+	{id:'archive_leak', name:'Przeciek z Archiwum', description:'Po zakończeniu następnego głosowania Gospodarz poinformuje Cię, czy wśród dwóch osób z największą liczbą głosów znajdował się przynajmniej jeden Mafiozo.', type:'private', roles:['Miasto']},
+	{id:'avenger', name:'Mściciel', description:'Jeżeli zostałeś wskazany do opuszczenia gry, wskazujesz osobę, która opuści ją zamiast Ciebie.', type:'public', roles:['Miasto','Mafia']},
 	{id:'blood_legacy', name:'Dziedzictwo Krwi', description:'Po zagraniu tej karty zostajesz wyeliminowany z gry, lecz w Twoje miejsce zostaje powołany dodatkowy Mafiozo.', type:'public', roles:['Mafia']},
-    {id:'fair_judge', name:'Sprawiedliwy Sędzia', description:'W trakcie najbliższego głosowania wyeliminowany może być tylko Mafiozo. Jeśli w głosowaniu zostanie wybrany Obywatel, nie zostanie usunięty z rozgrywki.', type:'public', roles:['Miasto','Mafia']},
-    {id:'crown_witness', name:'Świadek Koronny', description:'Zyskujesz immunitet i nie możesz zostać wyeliminowany z gry podczas następnego głosowania.', type:'public', roles:['Miasto','Mafia']},
-	
-    {id:'suspect_profile', name:'Profil Podejrzanego', description:'Użyj tej karty, aby wszyscy poznali tożsamość wyeliminowanej w następnym głosowaniu osoby.', type:'public', roles:['Miasto','Mafia']},
-    {id:'investigative_report', name:'Raport Śledczy', description:'Użyj tej karty, aby odkryć pozostałą w grze ilość Mafiozów. Nie możesz podzielić się tą informacją z innymi.', type:'private', roles:['Miasto']},
-    {id:'madman', name:'Szaleniec', description:'Po użyciu tej karty jeśli zostaniesz wyeliminowany w trakcie głosowania, zamiast Ciebie odpada losowy gracz.', type:'private', roles:['Miasto','Mafia']},
-
-    {id:'recruit', name:'Rekrut', description:'Dołączasz do grona Mafii i budzisz się z nimi w najbliższej fazie nocy. Zostajesz Mafią do końca gry.', type:'private', roles:['Miasto','Mafia']},
-	{id:'tribune', name: 'Trybuna Umarłych', description:'Użyj tej karty aby uciszyć żyjących i przenieść dalszą dyskusję z głosowaniem na ręce umarłych. Dziś to oni zdecydują kto odpada.', type: 'public', roles:['Miasto','Mafia']},
-    {id:'citizen_rep', name:'Przedstawiciel Obywateli', description:'Wskaż osobę, która będzie miała podwójny głos do końca rozgrywki. Nie możesz wskazać siebie.', type:'public', roles:['Miasto','Mafia']},
-	{id:'veto', name:'Veto', description:'Możesz anulować głosowanie w bieżącej fazie dnia.', type:'public', roles:['Miasto','Mafia']},
+	{id:'bodyguard', name:'Ochroniarz', description:'Wskaż dwie osoby, które nie będą mogły brać udziału w najbliższym głosowaniu. Nie mogą one zostać wyeliminowane w jego trakcie.', type:'public', roles:['Miasto','Mafia']},
+	{id:'boss_mama', name:'Boss Mama', description:'Używając tej karty wyciszasz mafię następnej nocy. Nie może ona wtedy nikogo wyeliminować.', type:'public', roles:['Miasto','Mafia']},
+	{id:'blackmailer', name:'Szantażysta', description:'Wskaż gracza który następnego dnia zostanie zaszantażowany przez Mafie. Będzie musiał on dążyć do wygłosowania wskazanego przez Mafię gracza.', type:'private', roles:['Mafia']},
+	{id:'cancel_power', name:'Karta Anulacji Mocy', description:'Wskaż gracza, którego zagrana karta mocy straci swoje działanie.', type:'public', roles:['Miasto','Mafia']},
+	{id:'chosen_of_dead', name:'Wybraniec Umarłych', description:'Użyj tej karty by przywrócić do świata żywych losowego gracza.', type:'public', roles:['Miasto','Mafia']},
+	{id:'citizen_rep', name:'Przedstawiciel Obywateli', description:'Wskaż osobę, która będzie miała podwójny głos do końca rozgrywki. Nie możesz wskazać siebie.', type:'public', roles:['Miasto','Mafia']},
 	{id:'common_interest', name:'Wspólny Interes', description:'Wybierz dwóch graczy, a Gospodarz powie Ci czy są w tych samych frakcjach. Nie możesz podzielić się tą informacją.', type:'private', roles:['Miasto']},
-	{id:'false_evidence', name:'Fałszywy Trop', description:'Wskaż gracza, który po sprawdzeniu jego przynależności przez inncyh gracze ukaże się jako Mafia.', type:'private', roles:['Mafia']},
-	{id:'godfather', name:'Ojciec Chrzestny', description:'Użyj tej karty aby Twój głos był kluczowy podczas eliminacji gracza w nocy.', type:'private', roles:['Mafia']},
-	{id:'gambler', name:'Hazardzista', description:'Wytypuj gracza, który według Ciebie zostanie w tej rundzie wyeliminowany przez Miasto. Jeśli trafisz otrzymujesz 2 Karty Mocy, jeśli nie- tracisz wszystkie posiadane karty i możliwość ich zdobycia następnego dnia.', type:'private', roles:['Miasto','Mafia']},
+	{id:'confiscation', name:'Konfiskata', description:'Wskaż gracza, którego jedna z kart zostaje mu odebrana i wraca do talii.', type:'public', roles:['Miasto','Mafia']},
+	{id:'corrupt_cop', name:'Skorumpowany Gliniarz', description:'Po użyciu tej karty wszystkie informacje zdobyte przez Miasto następnego dnia są fałszywe. ', type:'private', roles:['Mafia']},
+	{id:'crown_witness', name:'Świadek Koronny', description:'Zyskujesz immunitet i nie możesz zostać wyeliminowany z gry podczas następnego głosowania.', type:'public', roles:['Miasto','Mafia']},
 	{id:'dark_pact', name:'Mroczny Pakt', description:'Wybierz gracza, który otrzyma każdy nałożony na Ciebie efekt (w tym śmierć) aż do końca gry.', type:'private', roles:['Miasto','Mafia']},
-	{id:'rebound', name:'Rykoszet', description:'Jeśli ktoś użyje na Tobie negatywnej Karty Mocy w tej rundzie, jej efekt odbije się w nadawcę.', type:'private', roles:['Miasto','Mafia']},
+	{id:'delayed_execution', name:'Oddalona Egzekucja', description:'Zagraj te kartę aby ochronić członka Mafii w najbliższym głosowaniu. Jeśli wskazany gracz jest z Mafii, nie odpada z gry.', type:'public', roles:['Miasto','Mafia']},
+	{id:'delayed_poison', name:'Opóźniona Trucizna', description:'Wyeliminuj dowolną osobę, ale przejdzie ona do świata umarłych dopiero następnego dnia rano.', type:'public', roles:['Miasto','Mafia']},
+	{id:'doctor', name:'Lekarz', description:'Wskaż Gospodarzowi osobę, którą ochronisz przed wyrokiem Mafii w trakcie najbliższej nocy.', type:'private', roles:['Miasto']},
+	{id:'don_decision', name:'Decyzja Dona', description:'Musisz zagrać te kartę od razu. Następuje rzut monetą, który decyzuje o tym czy odpadniesz z gry czy przeżyjesz.', type:'public', roles:['Miasto','Mafia']},
+	{id:'duplication', name:'Cynk od Informatora', description:'Otrzymujesz ostatnio użytą w grze kartę Mocy.', type:'public', roles:['Miasto','Mafia']},
+    {id:'fair_judge', name:'Sprawiedliwy Sędzia', description:'W trakcie najbliższego głosowania wyeliminowany może być tylko Mafiozo. Jeśli w głosowaniu zostanie wybrany Obywatel, nie zostanie usunięty z rozgrywki.', type:'public', roles:['Miasto','Mafia']},
+	{id:'faked_death', name:'Upozorowana Śmierć', description:'Jeśli zginiesz podczas głosowania lub nocy, przechodzisz na 1 dzień do Świata Umarłych. Po następnej fazie nocy wracasz do Świata Żywych.', type:'private', roles:['Miasto','Mafia']},
+	{id:'false_evidence', name:'Fałszywy Trop', description:'Wskaż gracza, który po sprawdzeniu jego przynależności przez inncyh gracze ukaże się jako Mafia.', type:'private', roles:['Mafia']},
+	{id:'final_judgment', name:'Sąd Ostateczny', description:'Wykorzystaj tę kartę, aby po zakończeniu głosowania natychmiast zarządzić drugie, dodatkowe głosowanie.', type:'public', roles:['Miasto', 'Mafia']},
+	{id:'fog_of_war', name:'Mgła Wojny', description:'Podczas najbliższego głosowania licznik głosów będzie widoczny tylko dla Gospodarza.', type:'private', roles:['Mafia']},
+	{id:'forced_sacrifice', name:'Wymuszona Ofiara', description:'Wskaż osobę, która jest eliminowana z rozgrywki, ale może ona na swoje miejsce przywrócić innego, martwego gracza.', type:'public', roles:['Miasto','Mafia']},
+	{id:'full_moon', name:'Pełnia Księżyca', description:'Następnej nocy prócz celu wskazanego przez Mafię zginie jeden, losowy Obywatel. W zamian gospodarz ujawnia mieszkańcom tożsamość jednego z mafiozów.', type:'private', roles:['Miasto','Mafia']},
+	{id:'gambler', name:'Hazardzista', description:'Wytypuj gracza, który według Ciebie zostanie w tej rundzie wyeliminowany przez Miasto. Jeśli trafisz otrzymujesz 2 Karty Mocy, jeśli nie- tracisz wszystkie posiadane karty i możliwość ich zdobycia następnego dnia.', type:'private', roles:['Miasto','Mafia']},
+	{id:'godfather', name:'Ojciec Chrzestny', description:'Użyj tej karty aby Twój głos był kluczowy podczas eliminacji gracza w nocy.', type:'private', roles:['Mafia']},
+	{id:'grave_whisper', name:'Grobowy Szept', description:'Użyj tej karty, aby w nadchodzącym głosowaniu osoby wyeliminowane mogą wskazać winnego razem z żyjącymi uczestnikami.', type:'public', roles:['Miasto','Mafia']},
+	{id:'hidden_victim', name:'Ukryta Ofiara', description:'Użyj tej karty, aby wyeliminowana przez mafie osoba zginęła dopiero po rozpoczęciu następnej fazy głosowania.', type:'private', roles:['Mafia']},
+	{id:'in_broad_daylight', name:'W Biały Dzień', description:'Możesz wyeliminować dowolną osobę, ale natychmiast zostajesz schwytany i opuszczasz rozgrywkę.', type:'public', roles:['Mafia']},
+	{id:'investigative_report', name:'Raport Śledczy', description:'Użyj tej karty, aby odkryć pozostałą w grze ilość Mafiozów. Nie możesz podzielić się tą informacją z innymi.', type:'private', roles:['Miasto']},
+	{id:'iron_alibi', name:'Żelazne Alibi', description:'Użyj tej karty, aby nie być celem żadnej Karty Mocy w tej rundzie (zarówno negatywnej jak i pozytywnej).', type:'private', roles:['Miasto','Mafia']},
+	{id:'jury', name:'Ława Przysięgłych', description:'Po następnym głosowaniu otrzymasz informację kto na kogo zagłosował.', type:'private', roles:['Miasto','Mafia']},
+	{id:'kamikaze', name:'Kamikadze', description:'Możesz wyeliminować dowolną osobę z gry, ale ty również zostajesz wyeliminowany.', type:'public', roles:['Miasto','Mafia']},
 	{id:'last_will', name:'Ostatnia Wola', description:'Wskaż Gospodarzowi gracza, który otrzyma wszystkie Twoje Karty Mocy jeśli zginiesz.', type:'private', roles:['Miasto','Mafia']},
-	{id:'voice_of_reason', name:'Głos Rozsądku', description:'Zadaj Gospodarzowi jedno pytanie o stan gry, na które ten musi odpowiedzieć Tak lub Nie.', type:'private', roles:['Miasto','Mafia']},
-
-    {id:'boss_mama', name:'Boss Mama', description:'Używając tej karty wyciszasz mafię następnej nocy. Nie może ona wtedy nikogo wyeliminować.', type:'public', roles:['Miasto','Mafia']}
+	{id:'lazarus_protocol', name:'Protokół Łazarz', description:'Możesz wskrzesić losowego gracza, ale nie może on głosować ani otrzymywać Kart Mocy.', type:'public', roles:['Miasto','Mafia']},
+	{id:'life_insurance', name:'Polisa na Życie', description:'Wskaż gracza ze Świata Umarłych. Jeśli zginiesz, on natychmiast wraca do gry na Twoje miejsce.', type:'private', roles:['Miasto','Mafia']},
+	{id:'list_of_the_damned', name:'Lista Potępionych', description:'Użyj tej karty, aby Martwi wybrali spośród Żywych 2 osoby- to między nimi odbędzie się następne głosowanie.', type:'public', roles:['Miasto','Mafia']},
+	{id:'logistical_support', name:'Wsparcie Logistyczne', description:'Wskaż gracza, który otrzyma następnego dnia dodatkową Kartę Mocy.', type:'private', roles:['Miasto','Mafia']},
+	{id:'lovers', name:'Anioł Miłości', description:'Wybierz dwóch graczy, aby następnej nocy połączyć ich miłością, silniejszą od przynależności do roli. Jeśli jeden z zakochanych zginie, drugi odpada razem z nim', type:'private', roles:['Miasto','Mafia']},
+	{id:'luck_shot', name:'Łut Szczęścia', description:'Zagraj te karte od razu po otrzymaniu. Rzut monetą decyduje czy otrzymasz 2 Karty Mocy czy stracisz 1 którą posiadasz.', type:'public', roles:['Miasto','Mafia']},
+	{id:'madman', name:'Szaleniec', description:'Po użyciu tej karty jeśli zostaniesz wyeliminowany w trakcie głosowania, zamiast Ciebie odpada losowy gracz.', type:'private', roles:['Miasto','Mafia']},
+	{id:'miracle_worker', name:'Cudotwórca', description:'Wskaż osobę ze Świata Umarłych, która natychmiast powróci do gry.', type:'public', roles:['Miasto','Mafia']},
+	{id:'misfire', name:'Błędny Strzał', description:'Najbliższej nocy osoba wyeliminowana przez mafie jest losowa. Strzał może również trafić w członka mafii.', type:'private', roles:['Miasto','Mafia']},
+	{id:'poison_blade', name:'Zatrute Ostrze', description:'Użycie tej karty sprawia, że cel Mafii nie ginie natychmiast, lecz zostaje otruty. Traci wszystkie karty i umiera następnej nocy.', type:'private', roles:['Mafia']},
+	{id:'power_for_selected', name:'Moc Dla Wybranych', description:'Ty oraz dwie wybrane przez Ciebie osoby otrzymujecie kartę mocy.', type:'public', roles:['Miasto','Mafia']},
+	{id:'power_theft', name:'Kradzież Mocy', description:'Wybierz Gracza, któremu chcesz ukraść jedną Kartę Mocy.', type:'public', roles:['Miasto','Mafia']},
+	{id:'purification', name:'Oczyszczenie', description:'Ujawniasz wszystkim swoją rolę, ale tracisz wszystkie inne karty oraz możliwość oddania głosu.', type:'public', roles:['Miasto']},
+	{id:'rebound', name:'Rykoszet', description:'Jeśli ktoś użyje na Tobie negatywnej Karty Mocy w tej rundzie, jej efekt odbije się w nadawcę.', type:'private', roles:['Miasto','Mafia']},
+	{id:'recruit', name:'Rekrut', description:'Dołączasz do grona Mafii i budzisz się z nimi w najbliższej fazie nocy. Zostajesz Mafią do końca gry.', type:'private', roles:['Miasto','Mafia']},
+	{id:'rigged_vote', name:'Fałszywy Wynik', description:'Użyj tej karty, aby w nastepnym głosowaniu Miasta odpadł losowy gracz.', type:'private', roles:['Mafia']},
+	{id:'second_chance', name:'Druga Szansa', description:'Użyj tej karty, aby pierwsza wyeliminowana z gry osoba wróciła do Żywych.', type:'public', roles:['Miasto','Mafia']},
+	{id:'secret_alliance', name:'Tajne Porozumienie', description:'Użyj tej karty, aby Gospodarz wskazał Ci innego Mieszkańca. Otrzymasz prywatną informację o jego tożsamości, a on dowie się, że Ty również jesteś po stronie Miasta.', type:'private', roles:['Miasto']},
+	{id:'silence_card', name:'Wyciszenie', description:'Użycie tej karty blokuje możliwość zagrania jakiejkolwiek innej karty do końca rundy.', type:'public', roles:['Miasto','Mafia']},
+	{id:'silent_sabotage', name:'Zmowa Milczenia', description:'Wskaż Gospodarzowi gracza, który ma zostać uciszony następnego dnia. Nie może on rozmawiać ani głosować', type:'private', roles:['Mafia']},
+	{id:'sniper', name:'Snajper', description:'Wskaż osobę którą chcesz wyeliminować z gry. Jeżeli trafisz Obywatela- odpadasz razem z nim.', type:'public', roles:['Miasto','Mafia']},
+	{id:'spiritual_seance', name:'Seans Spirytystyczny', description:'Wybierz gracza ze Świata Umarłych, który będzie mógł wypowiadać się podczas najbliższej Dyskusji.', type:'public', roles:['Miasto','Mafia']},
+	{id:'spying', name:'Echo Zamachu', description:'Jako gracz otrzymasz informacje o każdej nieudanej eliminacji przez Mafie. Nie możesz podzielić się tą informacją.', type:'private', roles:['Miasto']},
+	{id:'support', name:'Wsparcie', description:'Wskaż gospodarzowi osobę, z którą będziesz bezpieczny najbliższej nocy.', type:'private', roles:['Miasto','Mafia']},
+	{id:'suspect_profile', name:'Profil Podejrzanego', description:'Użyj tej karty, aby wszyscy poznali tożsamość wyeliminowanej w następnym głosowaniu osoby.', type:'public', roles:['Miasto','Mafia']},
+	{id:'tribunal_of_state', name:'Trybunał Stanu', description:'Wskaż osobę, która automatycznie trafia przed Sąd Żywych. Miasto decyduje większością głosów czy zostanie wyeliminowana.', type:'public', roles:['Miasto','Mafia']},
+	{id:'tribune', name: 'Trybuna Umarłych', description:'Użyj tej karty aby uciszyć żyjących i przenieść dalszą dyskusję z głosowaniem na ręce umarłych. Dziś to oni zdecydują kto odpada.', type: 'public', roles:['Miasto','Mafia']},
+	{id:'uncertain_info', name:'Niepewna Informacja', description:'Wskaż Gospodarzowi trzy podejrzane osoby a ten poinformuje Cię ilu Mafiozów jest wśród nich. Nie możesz się z nikim podzielić tą informacją.', type:'private', roles:['Miasto','Mafia']},
+	{id:'untouchable', name:'Nietykalny', description:'Użyj tej karty by otrzymać nietykalność. Nie możesz zostać wyeliminowany następnej nocy przez Mafie.', type:'private', roles:['Miasto','Mafia']},
+    {id:'veto', name:'Veto', description:'Możesz anulować głosowanie w bieżącej fazie dnia.', type:'public', roles:['Miasto','Mafia']},
+    {id:'voice_of_reason', name:'Głos Rozsądku', description:'Zadaj Gospodarzowi jedno pytanie o stan gry, na które ten musi odpowiedzieć Tak lub Nie.', type:'private', roles:['Miasto','Mafia']}
 ];
 
 // =========================
@@ -95,31 +115,62 @@ let cardsDatabase = [
 io.on('connection', socket => {
 	
 	// 🔥 RZUT MONETĄ (DECYZJA DONA)
-	socket.on('tossCoin', (hostId) => {
+	socket.on('tossCoin', (data) => {
+		const { hostId, type } = data; // odbieramy ID hosta i typ rzutu
 		const host = players.find(p => p.id === hostId && p.isHost);
 		if (!host) return;
-		
-		const result = Math.random() < 0.5 ? 'Łaska Dona' : 'Wyrok Dona';
-		const color = result === 'Łaska Dona' ? '#2ecc71' : '#e74c3c'; // Zielony vs Czerwony
-		
-		io.emit('coinResult', { result, color });
+
+		let result, color, chatLabel;
+		const isSuccess = Math.random() < 0.5;
+
+		if (type === 'luck') {
+			// --- Wariant dla Łut Szczęścia ---
+			result = isSuccess ? 'SZCZĘŚCIE' : 'PECH';
+			color = isSuccess ? '#2ecc71' : '#e74c3c';
+			chatLabel = isSuccess ? '☘️ ŁUT SZCZĘŚCIA: Gracz otrzymuje 2 karty!' : '💀 ŁUT SZCZĘŚCIA: Gracz traci kartę!';
+		} else {
+			// --- Wariant domyślny (Decyzja Dona) ---
+			result = isSuccess ? 'Łaska Dona' : 'Wyrok Dona';
+			color = isSuccess ? '#2ecc71' : '#e74c3c';
+			chatLabel = isSuccess ? '⚖️ DECYZJA DONA: Łaska! Gracz zostaje w grze.' : '⚖️ DECYZJA DONA: Wyrok! Gracz odpada.';
+		}
+
+		io.emit('coinResult', { result, color, chatLabel, type });
 	});
 	
 	socket.on('mafiaVote', (targetId) => {
-    const sender = players.find(p => p.id === socket.id);
-    // Tylko żywa mafia może wybierać cel i tylko w nocy
-    if (sender && sender.role === 'Mafia' && sender.alive && currentPhase === 'Noc') {
-        mafiaTarget = targetId;
-        const targetName = players.find(p => p.id === targetId)?.name;
-        
-        // Informujemy całą mafię o wyborze (żeby widzieli kogo wybrali koledzy)
-        players.forEach(p => {
-			if (p.role === 'Mafia') {
-				io.to(p.id).emit('systemMessage', `[MAFIA] Cel ustawiony na: ${targetName}`);
+		const sender = players.find(p => p.id === socket.id);
+		const target = players.find(p => p.id === targetId);
+		
+        if (!target) return;
+		
+		if (target.isHost) {
+			socket.emit('systemMessage', '❌ Nie możesz wyeliminować Gospodarza!');
+			return;
+		}
+	
+		if (typeof godfatherId !== 'undefined' && godfatherId !== null) {
+			if (godfatherId !== socket.id) {
+				socket.emit('systemMessage', '🕴️ Tylko Ojciec Chrzestny decyduje o eliminacji.');
+				return;
 			}
-		});
-    }
-});
+		}
+		
+		// Tylko żywa mafia może wybierać cel i tylko w nocy
+		if (sender && sender.role === 'Mafia' && sender.alive && currentPhase === 'Noc') {
+			mafiaTarget = targetId;
+			
+			const targetName = target.name || "Nieznajomy";
+        
+			// Informujemy całą mafię o wyborze (żeby widzieli kogo wybrali koledzy)
+			players.forEach(p => {
+				if (p.role === 'Mafia' && p.alive) {
+					io.to(p.id).emit('systemMessage', `[MAFIA] Cel ustawiony na: ${targetName}`);
+				}
+			});
+		}
+	});
+	
 	// 🎲 KOŁO FORTUNY
 	socket.on('startWheelSpin', (data) => {
 		io.emit('syncWheelSpin', data);
@@ -146,7 +197,8 @@ io.on('connection', socket => {
             role: isHost ? null : undefined,
             cards: [],
             muted: false,  // nowa właściwość wyciszenia
-			doubleVote: false
+			doubleVote: false,
+			blackmailedBy: null
         };
         players.push(player);
 
@@ -174,62 +226,67 @@ io.on('connection', socket => {
 	}
 
 
-    // 🕹 START GRY
-    socket.on('startGame', (hostId) => {
-    console.log("Otrzymano próbę startu od:", hostId);
+    // 🕹 START GRY Z WYBOREM LICZBY MAFII
+    socket.on('startGame', (data) => {
+        // Obsługa obu formatów: starego (ID jako string) i nowego (obiekt z manualMafiaCount)
+        const hostId = typeof data === 'string' ? data : data.hostId;
+        const manualCount = data.manualMafiaCount || 1;
 
-    const allPlayers = Object.values(players);
-    const host = players[hostId] || allPlayers.find(p => p.isHost);
+        console.log("Otrzymano próbę startu od:", hostId, "Wybrana liczba Mafii:", manualCount);
 
-    if (!host || !host.isHost) {
-        console.log("Błąd: Próba startu przez osobę bez uprawnień Hosta.");
-        return;
-    }
+        const allPlayers = Object.values(players);
+        const host = players[hostId] || allPlayers.find(p => p.isHost);
 
-    // Wybieramy tylko graczy, którzy NIE są hostem
-    const participants = allPlayers.filter(p => !p.isHost);
-
-    if (participants.length === 0) {
-        console.log("Błąd: Brak graczy do rozpoczęcia gry.");
-        socket.emit('systemMessage', 'Potrzebujesz przynajmniej jednego gracza (poza Hostem), by zacząć!');
-        return;
-    }
-
-    // 1. Reset i przypisanie ról TYLKO uczestnikom
-    // Hostowi nadajemy specjalną rolę, żeby system nie traktował go jako gracza
-    allPlayers.forEach(p => {
-        if (p.isHost) {
-            p.role = 'Gospodarz';
-            p.faction = 'Neutralny';
-        } else {
-            p.role = 'Miasto';
-            p.faction = 'Miasto';
+        if (!host || !host.isHost) {
+            console.log("Błąd: Próba startu przez osobę bez uprawnień Hosta.");
+            return;
         }
-    });
 
-    // Losowanie Mafii tylko z uczestników
-    const mafiaCount = Math.max(1, Math.floor(participants.length / 3));
-    const shuffled = [...participants].sort(() => 0.5 - Math.random());
+        // Wybieramy tylko graczy, którzy NIE są hostem
+        const participants = allPlayers.filter(p => !p.isHost);
 
-    for (let i = 0; i < mafiaCount; i++) {
-        shuffled[i].role = 'Mafia';
-        shuffled[i].faction = 'Mafia';
-    }
+        if (participants.length === 0) {
+            console.log("Błąd: Brak graczy do rozpoczęcia gry.");
+            socket.emit('systemMessage', 'Potrzebujesz przynajmniej jednego gracza (poza Hostem), by zacząć!');
+            return;
+        }
 
-    // 2. Synchronizacja
-    io.emit('updatePlayers', Object.values(players));
-    
-    // Wysyłamy rolę do każdego gracza indywidualnie
-    // (Dzięki temu Host nie dostanie powiadomienia, bo sprawdzimy to w app.js)
-    Object.values(players).forEach(p => {
-        io.to(p.id).emit('yourRole', { role: p.role, faction: p.faction });
-		io.to(p.id).emit('systemMessage', `🕵️ Twoja rola w tej rozgrywce to: ${p.role.toUpperCase()}`);
-    });
+        // 1. Reset i przypisanie ról TYLKO uczestnikom
+        allPlayers.forEach(p => {
+            if (p.isHost) {
+                p.role = 'Gospodarz';
+                p.faction = 'Neutralny';
+            } else {
+                p.role = 'Miasto';
+                p.faction = 'Miasto';
+            }
+        });
 
-    currentPhase = 'Dzień';
-    io.emit('phaseChanged', currentPhase);
-    io.emit('systemMessage', 'Gra rozpoczęta! Nastał DZIEŃ.');
-    console.log("Gra pomyślnie wystartowała.");
+        // 2. Dynamiczne losowanie wybranej liczby Mafii
+        // Zabezpieczenie: Mafia nie może stanowić wszystkich graczy (zawsze min. 1 mieszkaniec Miasta)
+        const maxPossibleMafia = Math.max(1, participants.length - 1);
+        const finalMafiaCount = Math.min(manualCount, maxPossibleMafia);
+        
+        const shuffled = [...participants].sort(() => 0.5 - Math.random());
+
+        for (let i = 0; i < finalMafiaCount; i++) {
+            shuffled[i].role = 'Mafia';
+            shuffled[i].faction = 'Mafia';
+        }
+
+        // 3. Synchronizacja
+        io.emit('updatePlayers', Object.values(players));
+        
+        // Wysyłamy rolę do każdego gracza indywidualnie
+        Object.values(players).forEach(p => {
+            io.to(p.id).emit('yourRole', { role: p.role, faction: p.faction });
+            io.to(p.id).emit('systemMessage', `🕵️ Twoja rola w tej rozgrywce to: ${p.role.toUpperCase()}`);
+        });
+
+        currentPhase = 'Dzień';
+        io.emit('phaseChanged', currentPhase);
+        io.emit('systemMessage', `Gra rozpoczęta! Nastał DZIEŃ (Liczba Mafii: ${finalMafiaCount}).`);
+        console.log(`Gra pomyślnie wystartowała z ${finalMafiaCount} mafiosami.`);
     });
 	
 
@@ -287,10 +344,31 @@ io.on('connection', socket => {
                     // Finalizacja zabójstwa
                     const victim = players.find(p => p.id === mafiaTarget);
                     if (victim && victim.alive && !victim.protected) {
-                        victim.alive = false;
-                        victim.cards = [];
-                        io.emit('systemMessage', `🚨 Noc była niespokojna... Nie żyje: ${victim.name}`);
-                        io.to(victim.id).emit('updateCards', []);
+						
+						if (hiddenVictimActive) {
+							io.emit('systemMessage', '🛡️ Ktoś uniknął śmierci tej nocy!'); // Zmyłka dla graczy
+							socket.emit('systemMessage', `⚠️ [TAJNE] Ukryta Ofiara to: ${victim.name}. Pamiętaj o ręcznej eliminacji po głosowaniu.`);
+        
+							hiddenVictimActive = false;
+							io.emit('updateHiddenVictimState', false);
+							
+							mafiaTarget = null;
+						}
+						
+						else if (poisonBladeActive) {
+							victim.cards = []; // Traci karty zgodnie z opisem
+							io.to(victim.id).emit('updateCards', []);
+							io.emit('systemMessage', `🤢 TRUCIZNA! Gracz ${victim.name} został raniony zatrutym ostrzem. Jego karty tracą moc, a on sam może nie dożyć jutra...`);
+        
+							poisonBladeActive = false; // Resetujemy efekt po użyciu
+							io.emit('updatePoisonBladeState', false); // Wyłączamy świecenie u Hosta
+						}
+						else {
+							victim.alive = false;
+							victim.cards = [];
+							io.emit('systemMessage', `🚨 Noc była niespokojna... Nie żyje: ${victim.name}`);
+							io.to(victim.id).emit('updateCards', []);
+						}
                     } else if (victim && victim.protected) {
                         io.emit('systemMessage', `🛡️ Ktoś uniknął śmierci tej nocy!`);
                     }
@@ -316,12 +394,15 @@ io.on('connection', socket => {
                         io.emit('updateFullMoonState', false);
                     }
                 }
-                mafiaTarget = null;
             }
             
             // Czyszczenie osłon na koniec nocy
             players.forEach(p => p.protected = false);
 			godfatherId = null; // Rola wygasa po nocy
+			mafiaTarget = null;
+			poisonBladeActive = false;
+			hiddenVictimActive = false;
+			io.emit('updatePoisonBladeState', false);
             io.emit('updatePlayers', players.filter(p=>p && p.id && p.name));
         }
 
@@ -364,16 +445,28 @@ io.on('connection', socket => {
         let maxPoints = 0;
         let eliminated = null;
         let tie = false;
+		
+		if (rigVotingActive) {
+			const livingPlayers = players.filter(p => p.alive && !p.isHost);
+			if (livingPlayers.length > 0) {
+				const randomVictim = livingPlayers[Math.floor(Math.random() * livingPlayers.length)];
+				eliminated = randomVictim.id;
+				io.emit('systemMessage', '⚠️ DOSZŁO DO MANIPULACJI WYNIKAMI! Oficjalny protokół został podmieniony...');
+			}
+			rigVotingActive = false; // Resetujemy po użyciu
+			io.emit('updateRigVotingState', false);
+		} else {
 
-        for (let targetId in voteCounts) {
-            if (voteCounts[targetId] > maxPoints) {
-                maxPoints = voteCounts[targetId];
-                eliminated = targetId;
-                tie = false;
-            } else if (voteCounts[targetId] === maxPoints && maxPoints > 0) {
-                tie = true; 
-            }
-        }
+			for (let targetId in voteCounts) {
+				if (voteCounts[targetId] > maxPoints) {
+					maxPoints = voteCounts[targetId];
+					eliminated = targetId;
+					tie = false;
+				} else if (voteCounts[targetId] === maxPoints && maxPoints > 0) {
+					tie = true; 
+				}
+			}
+		}
 
         // 3. Logika eliminacji lub ochrony
         if (tie) {
@@ -410,10 +503,33 @@ io.on('connection', socket => {
             io.emit('systemMessage', '🗳️ Nikt nie oddał głosów. Głosowanie nieważne.');
             resetVotingModifiers();
         }
+		
+		// --- LOGIKA KARTY: ŁAWA PRZYSIĘGŁYCH ---
+		let voteReport = "📜 [ŁAWA PRZYSIĘGŁYCH] Raport z głosowania:\n";
+		for (let vId in votes) {
+			const voter = players.find(p => p.id === vId);
+			const target = players.find(p => p.id === votes[vId]);
+			if (voter && target) {
+				voteReport += `• ${voter.name} zagłosował na: ${target.name}\n`;
+			}
+		}
+
+		// Wysyłamy raport TYLKO do Hosta, aby mógł go potem przekazać szeptem
+		if (host) {
+			io.to(host.id).emit('chatMessage', { 
+				msg: voteReport, 
+				from: 'SYSTEM', 
+				type: 'private' 
+			});
+			io.to(host.id).emit('systemMessage', '📋 Otrzymałeś raport Ławy Przysięgłych. Przekaż go posiadaczowi karty.');
+		}
 
         // 4. Czyścimy głosy i odświeżamy widok
         votes = {};
+		players.forEach(p => p.blackmailedBy = null);
 		fogOfWarActive = false;
+		graveWhisperActive = false;
+		io.emit('updateGraveWhisperState', false);
         io.emit('updateVotes', votes); 
         io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
     });
@@ -421,7 +537,16 @@ io.on('connection', socket => {
     // 🗳️ ODDANIE GŁOSU
     socket.on('vote', ({voterId, targetId}) => {
         const voter = players.find(p => p.id === voterId);
-        if (!voter) return;
+        if (!voter || !votingActive || votes[voterId]) return;
+		
+		// --- LOGIKA SZANTAŻU ---
+		if (voter.blackmailedBy) {
+			if (voter.blackmailedBy !== targetId) {
+				io.to(voterId).emit('systemMessage', '❌ TWOJA DŁOŃ DRŻY... Szantażysta nie pozwala Ci zagłosować na tę osobę. Musisz wybrać wskazany cel!');
+				io.to(voterId).emit('updateVotes', votes);
+				return;
+			}
+		}
         
         // 🔥 NOWE: BLOKADA DLA WYCISZONYCH (OCHRONIARZ)
         if (voter.isMuted) {
@@ -436,10 +561,12 @@ io.on('connection', socket => {
             }
         } else {
             if (!voter.alive) {
-                io.to(voterId).emit('systemMessage', 'Jako martwy nie możesz teraz głosować!');
-                return;
-            }
-        }
+				if (!graveWhisperActive) {
+					io.to(voterId).emit('systemMessage', 'Jako martwy nie możesz teraz głosować!');
+					return;
+				}
+			}
+		}
     
         if (!votingActive) return;
         
@@ -469,6 +596,14 @@ io.on('connection', socket => {
         }
 		
     });
+	
+	socket.on('toggleGraveWhisper', () => {
+		const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+		graveWhisperActive = !graveWhisperActive;
+		io.emit('updateGraveWhisperState', graveWhisperActive);
+		io.emit('systemMessage', graveWhisperActive ? '🕯️ Grobowy Szept: Umarli będą mogli oddać głos w tym głosowaniu!' : '🕯️ Grobowy Szept wygasł.');
+	});
 	
 	// --- 🎩️ USTAWIANIE OJCA CHRZESTNEGO ---
     socket.on('setGodfather', (targetId) => {
@@ -500,6 +635,54 @@ io.on('connection', socket => {
         // Rozsyłamy zaktualizowaną listę graczy z nową flagą isGodfather
         io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
     });
+	
+// --- OBSŁUGA MECHANIKI: DAR LOSU (ZSYNCHRONIZOWANA) ---
+
+	// 1. Wysyłanie propozycji (Draftu) - bez zmian, jest OK
+	socket.on('sendDraft', (data) => {
+		const { targetId, hostId } = data;
+	
+		const allCardIds = cardsDatabase.map(c => c.id);
+		const shuffled = [...allCardIds].sort(() => 0.5 - Math.random());
+		const draftOptions = [shuffled[0], shuffled[1]];
+
+		io.to(targetId).emit('receiveDraft', { options: draftOptions });
+		socket.emit('systemMessage', "Dar Losu został wysłany.");
+	});
+
+	// 2. Obsługa wyboru karty przez gracza - TUTAJ BYŁ BŁĄD NAZW
+	socket.on('acceptDraftCard', (cardId) => {
+		const cardData = cardsDatabase.find(c => c.id === cardId);
+
+		if (cardData) {
+			const player = players.find(p => p.id === socket.id);
+
+			if (player) {
+				// ZMIANA: Używamy .cards zamiast .inventory, aby było spójne z giveCard
+				if (!player.cards || !Array.isArray(player.cards)) {
+					player.cards = [];
+				}
+
+				// Dodajemy kartę do tej samej tablicy co Host
+				player.cards.push(cardData);
+
+				console.log(`[Draft] Gracz ${player.name} otrzymał: ${cardData.name}`);
+
+				// KLUCZOWE: Wysyłamy właściwą tablicę (.cards)
+				socket.emit('updateCards', player.cards);
+
+				// Informacja dla Hosta
+				const host = players.find(p => p.isHost);
+				if (host) {
+					io.to(host.id).emit('chatMessage', {
+						msg: `Gracz ${player.name} wybrał kartę: ${cardData.name}`,
+						from: 'System',
+						type: 'system'
+					});
+				}
+			}
+		}
+	});
 
 	socket.on('toggleProtect', (targetId) => {
         const host = players.find(p => p.id === socket.id && p.isHost);
@@ -566,6 +749,7 @@ io.on('connection', socket => {
         // Opcjonalnie wysyłamy aktualizację do hosta, żeby widział stan na przycisku
         io.emit('updateConfusionState', confusionActive);
 	});
+	
 	
 	socket.on('toggleFullMoon', () => {
 		const host = players.find(p => p.id === socket.id && p.isHost);
@@ -651,6 +835,27 @@ io.on('connection', socket => {
         io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
     });
 	
+	socket.on('togglePoisonBlade', () => {
+		const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+
+		poisonBladeActive = !poisonBladeActive;
+		socket.emit('systemMessage', poisonBladeActive 
+			? '🧪 Zatrute Ostrze aktywne! Następny cel Mafii zostanie zatruty zamiast zginąć od razu.' 
+			: '🧪 Zatrute Ostrze wyłączone.');
+    
+		io.emit('updatePoisonBladeState', poisonBladeActive);
+	});
+	
+	socket.on('toggleHiddenVictim', () => {
+		const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+
+		hiddenVictimActive = !hiddenVictimActive;
+		io.emit('updateHiddenVictimState', hiddenVictimActive);
+		socket.emit('systemMessage', hiddenVictimActive ? '🕵️ Ukryta Ofiara aktywna!' : '🕵️ Ukryta Ofiara wyłączona.');
+	});
+	
 	socket.on('linkLovers', ({ player1Id, player2Id, hostId }) => {
         // Szukamy graczy po ID w tablicy
         const p1 = players.find(p => p.id === player1Id);
@@ -678,6 +883,13 @@ io.on('connection', socket => {
             io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
         }
     });
+	
+	socket.on('toggleRigVoting', () => {
+		const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+		rigVotingActive = !rigVotingActive;
+		io.emit('updateRigVotingState', rigVotingActive);
+	});
 	
 	socket.on('toggleDelayedExecution', () => {
         const host = players.find(p => p.id === socket.id && p.isHost);
@@ -828,6 +1040,25 @@ io.on('connection', socket => {
         io.emit('updatePlayers', players.filter(p => p && p.id && p.name));
     });
 	
+	socket.on('setBlackmail', ({ victimId, targetId }) => {
+		const host = players.find(p => p.id === socket.id && p.isHost);
+		if (!host) return;
+
+		const victim = players.find(p => p.id === victimId);
+		const target = players.find(p => p.id === targetId);
+
+		if (victim && target) {
+			victim.blackmailedBy = targetId;
+        
+			// Wysyłamy wielkie powiadomienie
+			io.to(victimId).emit('notificationBlackmail', { 
+				targetName: target.name 
+			});
+
+			socket.emit('systemMessage', `✅ Szantaż ustawiony: ${victim.name} vs ${target.name}.`);
+		}
+	});
+	
     // 💬 WIADOMOŚCI
     socket.on('sendMessage', ({msg, from, type, to})=>{
         const sender = players.find(p=>p.id===socket.id);
@@ -933,6 +1164,11 @@ io.on('connection', socket => {
 
         const card = player.cards.find(c => c.id === cardId);
         if(!card) return;
+		
+		if (currentPhase === 'Noc' && player.role === 'Miasto') {
+			socket.emit('systemMessage', `🚫 Nie możesz używać kart mocy w nocy!`);
+			return;
+		}
         
         // --- SPECJALNA LOGIKA: W BIAŁY DZIEŃ ---
         if (cardId === 'in_broad_daylight') {
@@ -978,7 +1214,7 @@ io.on('connection', socket => {
         }
         else if(card.type === 'private'){
             const host = players.find(p => p.isHost);
-            io.emit('systemMessage', `${player.name} użył karty Spotkanie z Gospodarzem!`);
+            socket.emit('systemMessage', `📩 Użyłeś karty prywatnej: ${card.name}. Gospodarz otrzymał powiadomienie.`);
             if(host){
                 io.to(host.id).emit('systemMessage', `[TAJNE] ${player.name} użył karty: ${card.name}`);
             }
