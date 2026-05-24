@@ -84,7 +84,7 @@ let cardsDatabase = [
 	{id:'luck_shot', name:'Łut Szczęścia', description:'Zagraj te karte od razu po otrzymaniu. Rzut monetą decyduje czy otrzymasz 2 Karty Mocy czy stracisz 1 którą posiadasz.', type:'public', roles:['Miasto','Mafia']},
 	{id:'madman', name:'Szaleniec', description:'Po użyciu tej karty jeśli zostaniesz wyeliminowany w trakcie głosowania, zamiast Ciebie odpada losowy gracz.', type:'private', roles:['Miasto','Mafia']},
 	{id:'miracle_worker', name:'Cudotwórca', description:'Wskaż osobę ze Świata Umarłych, która natychmiast powróci do gry.', type:'public', roles:['Miasto','Mafia']},
-	{id:'misfire', name:'Błędny Strzał', description:'Najbliższej nocy osoba wyeliminowana przez mafie jest losowa. Strzał może również trafić w członka mafii.', type:'private', roles:['Miasto','Mafia']},
+	{id:'misfire', name:'Błędny Strzał', description:'Najbliższej nocy osoba wyeliminowana przez mafie jest losowa. Strzał może również trafić w członka mafii.', type:'private', roles:['Miasto']},
 	{id:'poison_blade', name:'Zatrute Ostrze', description:'Użycie tej karty sprawia, że cel Mafii nie ginie natychmiast, lecz zostaje otruty. Traci wszystkie karty i umiera następnej nocy.', type:'private', roles:['Mafia']},
 	{id:'power_for_selected', name:'Moc Dla Wybranych', description:'Ty oraz dwie wybrane przez Ciebie osoby otrzymujecie kartę mocy.', type:'public', roles:['Miasto','Mafia']},
 	{id:'power_theft', name:'Kradzież Mocy', description:'Wybierz Gracza, któremu chcesz ukraść jedną Kartę Mocy.', type:'public', roles:['Miasto','Mafia']},
@@ -99,12 +99,12 @@ let cardsDatabase = [
 	{id:'sniper', name:'Snajper', description:'Wskaż osobę którą chcesz wyeliminować z gry. Jeżeli trafisz Obywatela- odpadasz razem z nim.', type:'public', roles:['Miasto','Mafia']},
 	{id:'spiritual_seance', name:'Seans Spirytystyczny', description:'Wybierz gracza ze Świata Umarłych, który będzie mógł wypowiadać się podczas najbliższej Dyskusji.', type:'public', roles:['Miasto','Mafia']},
 	{id:'spying', name:'Echo Zamachu', description:'Jako gracz otrzymasz informacje o każdej nieudanej eliminacji przez Mafie. Nie możesz podzielić się tą informacją.', type:'private', roles:['Miasto']},
-	{id:'support', name:'Wsparcie', description:'Wskaż gospodarzowi osobę, z którą będziesz bezpieczny najbliższej nocy.', type:'private', roles:['Miasto','Mafia']},
+	{id:'support', name:'Wsparcie', description:'Wskaż gospodarzowi osobę, z którą będziesz bezpieczny najbliższej nocy.', type:'private', roles:['Miasto']},
 	{id:'suspect_profile', name:'Profil Podejrzanego', description:'Użyj tej karty, aby wszyscy poznali tożsamość wyeliminowanej w następnym głosowaniu osoby.', type:'public', roles:['Miasto','Mafia']},
 	{id:'tribunal_of_state', name:'Trybunał Stanu', description:'Wskaż osobę, która automatycznie trafia przed Sąd Żywych. Miasto decyduje większością głosów czy zostanie wyeliminowana.', type:'public', roles:['Miasto','Mafia']},
 	{id:'tribune', name: 'Trybuna Umarłych', description:'Użyj tej karty aby uciszyć żyjących i przenieść dalszą dyskusję z głosowaniem na ręce umarłych. Dziś to oni zdecydują kto odpada.', type: 'public', roles:['Miasto','Mafia']},
 	{id:'uncertain_info', name:'Niepewna Informacja', description:'Wskaż Gospodarzowi trzy podejrzane osoby a ten poinformuje Cię ilu Mafiozów jest wśród nich. Nie możesz się z nikim podzielić tą informacją.', type:'private', roles:['Miasto','Mafia']},
-	{id:'untouchable', name:'Nietykalny', description:'Użyj tej karty by otrzymać nietykalność. Nie możesz zostać wyeliminowany następnej nocy przez Mafie.', type:'private', roles:['Miasto','Mafia']},
+	{id:'untouchable', name:'Nietykalny', description:'Użyj tej karty by otrzymać nietykalność. Nie możesz zostać wyeliminowany następnej nocy przez Mafie.', type:'private', roles:['Miasto']},
     {id:'veto', name:'Veto', description:'Możesz anulować głosowanie w bieżącej fazie dnia.', type:'public', roles:['Miasto','Mafia']},
     {id:'voice_of_reason', name:'Głos Rozsądku', description:'Zadaj Gospodarzowi jedno pytanie o stan gry, na które ten musi odpowiedzieć Tak lub Nie.', type:'private', roles:['Miasto','Mafia']}
 ];
@@ -641,16 +641,36 @@ io.on('connection', socket => {
 	// 1. Wysyłanie propozycji (Draftu) - bez zmian, jest OK
 	socket.on('sendDraft', (data) => {
 		const { targetId, hostId } = data;
-	
-		const allCardIds = cardsDatabase.map(c => c.id);
-		const shuffled = [...allCardIds].sort(() => 0.5 - Math.random());
-		const draftOptions = [shuffled[0], shuffled[1]];
+		
+		// 1. Znajdujemy gracza docelowego, aby poznać jego rolę
+		const targetPlayer = players.find(p => p.id === targetId);
+		if (!targetPlayer) return;
+		const playerRole = targetPlayer.role; // np. 'Miasto' lub 'Mafia'
+		
+		// 2. Filtrujemy bazę: bierzemy tylko te karty, które mają rolę gracza w tablicy roles
+		const availableCards = cardsDatabase.filter(card => {
+			if (playerRole === 'Gospodarz') return true;
+			return Array.isArray(card.roles) && card.roles.includes(playerRole);
+		});
+		
+		console.log("--- DAR LOSU DEBUG ---");
+		console.log(`Gracz: ${targetPlayer.name} | Rola w obiekcie: "${playerRole}"`);
+		console.log(`Liczba znalezionych kart pasujących: ${availableCards.length}`);
+		console.log("-----------------------");
+		
+		if (availableCards.length < 3) {
+			socket.emit('systemMessage', "Błąd: Zbyt mało kart dostępnych dla tej roli!");
+			return;
+		}
+		
+		const shuffled = [...availableCards].sort(() => 0.5 - Math.random());
+		const draftOptions = [shuffled[0].id, shuffled[1].id, shuffled[2].id];
 
 		io.to(targetId).emit('receiveDraft', { options: draftOptions });
 		socket.emit('systemMessage', "Dar Losu został wysłany.");
 	});
 
-	// 2. Obsługa wyboru karty przez gracza - TUTAJ BYŁ BŁĄD NAZW
+	// 2. Obsługa wyboru karty przez gracza
 	socket.on('acceptDraftCard', (cardId) => {
 		const cardData = cardsDatabase.find(c => c.id === cardId);
 
