@@ -1313,7 +1313,7 @@ body.phase-day.is-dead {
 #mini-role-card {
     position: fixed;
     right: 20px;
-    top: 50%;
+    top: 20%;
     transform: translateY(-50%);
     width: 120px;
     height: 170px;
@@ -1325,18 +1325,6 @@ body.phase-day.is-dead {
     z-index: 100;
     transition: all 0.5s ease-in-out;
     border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Opcjonalny napis nad mini-kartą */
-#mini-role-card::before {
-    content: "TWOJA ROLA";
-    position: absolute;
-    top: -20px;
-    width: 100%;
-    text-align: center;
-    font-size: 10px;
-    color: #aaa;
-    letter-spacing: 1px;
 }
 
 /* --- KOLOROWE POŚWIATY DLA PASKA ARTEFAKTÓW --- */
@@ -1375,9 +1363,6 @@ body.phase-day.is-dead {
 #dead-talk-btn:hover { 
     filter: drop-shadow(0 0 20px #a29bfe) !important; 
 }
-
-/* --- LOGIKA DLA STANÓW AKTYWNYCH (Gdy przycisk jest włączony) --- */
-/* Jeśli Twój JS zmienia filtry, te reguły zapewnią, że poświata będzie intensywna */
 
 .host-side-icon.active {
     opacity: 1;
@@ -1421,34 +1406,45 @@ body.phase-day.is-dead {
     width: 200px;
     height: 320px;
     cursor: pointer;
-    transition: all 0.5s ease;
-    perspective: 1000px;
-	transform-style: preserve-3d;
+    perspective: 1000px; /* Pozwala na efekt 3D */
 }
 
-.card-back {
+.card-inner {
+    position: relative;
     width: 100%;
     height: 100%;
-    background-image: url('cards/back.png'); /* Użyj swojego rewersu kart */
-    background-size: cover;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+}
+
+/* Stan po obróceniu karty */
+.draft-card.flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-front-visual, .card-back-visual {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
     border-radius: 15px;
     border: 2px solid #f1c40f;
+    background-size: cover;
+    background-position: center;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-.draft-card:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 15px #f1c40f);
+/* Tył karty (widoczny na początku) */
+.card-front-visual {
+    background-image: url('cards/back.png');
+    z-index: 2;
 }
 
-.reveal-anim {
-    transform: scale(1.1) rotateY(180deg);
-    filter: brightness(1.5);
-}
-
-.reveal-anim .card-back {
-    transform: rotateY(180deg) !important; 
-    filter: brightness(1.2) drop-shadow(0 0 20px gold);
+/* Przód karty (ujawniony po obrocie) */
+.card-back-visual {
+    transform: rotateY(180deg);
+    z-index: 1;
 }
 
 .message.ghost-message {
@@ -1547,3 +1543,29 @@ body.phase-day.is-dead {
 .status-icon.loved { color: #ff4757; filter: drop-shadow(0 0 12px #ff4757); }
 .status-icon.rep { color: #3498db; filter: drop-shadow(0 0 12px #3498db); }
 
+.login-credits {
+    position: fixed;      /* Przykleja do ekranu, nie do boxa */
+    top: 30px;            /* Odstęp od góry */
+    right: 30px;          /* Odstęp od prawej */
+    text-align: right;
+    font-size: 14px;      /* Zwiększona czcionka dla czytelności */
+    color: rgba(255, 255, 255, 0.5); 
+    line-height: 1.6;
+    z-index: 25000;       /* Musi być nad tłem, ale pod modalem */
+    background: rgba(0, 0, 0, 0.3); /* Delikatna ciemna smuga pod tekstem */
+    padding: 10px 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(5px); /* Rozmycie tła pod napisami - bardzo eleganckie */
+    pointer-events: none;
+    transition: color 0.3s ease;
+}
+
+.login-credits strong {
+    color: #5c1cff;       /* Wyraźniejszy fiolet Twojego nicku */
+    font-weight: bold;
+}
+
+/* Po najechaniu myszką na róg napisy się rozświetlą */
+.login-credits:hover {
+    color: rgba(255, 255, 255, 0.9);
+}

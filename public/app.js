@@ -27,6 +27,9 @@ const joinBtn = document.getElementById('join-btn-new');
 const loginContainer = document.getElementById('login-container');
 const nicknameInput = document.getElementById('nickname-input');
 const hostCheckbox = document.getElementById('is-host-check');
+const bgMusic = new Audio('sounds/ambient_main.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.05; // Głośność ustawiona na 15%
 
 if (joinBtn) {
     joinBtn.onclick = () => {
@@ -42,6 +45,11 @@ if (joinBtn) {
         if (isHost) {
             document.body.classList.add('is-host');
         }
+		
+		// 🔥 START MUZYKI (Zaraz po walidacji imienia)
+        bgMusic.play().catch(error => {
+            console.log("Autoplay zablokowany lub brak pliku:", error);
+        });
 
         // Wysłanie danych do serwera
         socket.emit('joinGame', { name: playerName, isHost: isHost });
@@ -405,10 +413,20 @@ function showRoleReveal(role) {
         overlay.appendChild(cardImg);
     }
 
-    // Konfiguracja pod rolę
-    const isMafia = role === 'Mafia';
-    const imgPath = isMafia ? 'images/mafia.png' : 'images/city.png';
-    const roleColor = isMafia ? '#e74c3c' : '#3498db';
+	// Konfiguracja kolorów i ścieżek
+    let imgPath, roleColor;
+	const currentRole = role ? role.toLowerCase() : "";
+
+    if (currentRole === 'gospodarz' || currentRole === 'host') {
+        imgPath = 'images/host.png';
+        roleColor = '#d4af37'; // Złoty
+    } else if (role === 'Mafia') {
+        imgPath = 'images/mafia.png';
+        roleColor = '#e74c3c';
+    } else {
+        imgPath = 'images/city.png';
+        roleColor = '#3498db';
+    }
 
     textElement.innerText = `TWOJA ROLA: ${role.toUpperCase()}`;
     textElement.style.color = roleColor;
@@ -1189,8 +1207,6 @@ socket.on('phaseChanged', p => {
 
 // --- POWIADOMIENIE O ROLI ---
 socket.on('yourRole', (data) => {
-    if (isHost) return;
-	
 	// --- NOWA LOGIKA UKRYWANIA ZAKŁADKI ---
 	const mafiaTab = document.querySelector('.tab-btn[data-tab="mafia"]');
     if (mafiaTab) {
@@ -1202,25 +1218,13 @@ socket.on('yourRole', (data) => {
 		}
 	}
 	
+	showRoleReveal(data.role);
     const revealOverlay = document.getElementById('role-reveal-overlay');
     const revealText = document.getElementById('role-reveal-text');
 
     if (revealOverlay && revealText) {
-        // Ustawiamy nazwę roli
-        revealText.innerText = data.role;
-
-        // Ustawiamy kolor napisu w zależności od frakcji
-        if (data.faction === 'Mafia') {
-            revealText.style.color = '#ff4d4d'; // Czerwony dla Mafii
-            revealText.style.textShadow = '0 0 20px rgba(255, 77, 77, 0.8)';
-        } else {
-            revealText.style.color = '#4da6ff'; // Niebieski dla Miasta
-            revealText.style.textShadow = '0 0 20px rgba(77, 166, 255, 0.8)';
-        }
-
-        // Pokazujemy animację
-        revealOverlay.style.display = 'flex';
-        revealOverlay.style.opacity = '1';
+		revealOverlay.style.display = 'flex';
+		revealOverlay.style.opacity = '1';
 
         // Ukrywamy po 4 sekundach
         setTimeout(() => {
@@ -1320,7 +1324,7 @@ function showCardMenu(targetId) {
 		{id:'fair_judge', name:'Sprawiedliwy Sędzia', type: 'public', targetRole: 'both'},
 		{id:'faked_death', name:'Upozorowana Śmierć', type: 'private', targetRole: 'both'},
 		{id:'false_evidence', name:'Fałszywy Trop', type: 'private', targetRole: 'mafia'},
-		{id:'final_judgement', name:'Sąd Ostateczny', type: 'public', targetRole: 'both'},
+		{id:'final_judgment', name:'Sąd Ostateczny', type: 'public', targetRole: 'both'},
 		{id:'fog_of_war', name:'Mgła Wojny', type: 'private', targetRole: 'mafia'},
 		{id:'forced_sacrifice', name:'Wymuszona Ofiara', type: 'public', targetRole: 'both'},
         {id:'full_moon', name:'Pełnia Księżyca', type: 'private', targetRole: 'both'},
@@ -2051,7 +2055,6 @@ if (notebookArea) {
     };
 }
 
-// app.js - nasłuchiwanie na propozycję draftu
 socket.on('receiveDraft', (data) => {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -2064,11 +2067,23 @@ socket.on('receiveDraft', (data) => {
             <p style="color: white; margin-bottom: 40px;">Gospodarz wystawia Twoje szczęście na próbę... Wybierz jedną kartę.</p>
             
             <div style="display: flex; gap: 40px; justify-content: center;">
-                <div class="draft-card" onclick="pickDraftCard('${data.options[0]}', 0)" id="draft-0">
-                    <div class="card-back"></div>
+                <div class="draft-card" data-cardid="${data.options[0]}" onclick="pickDraftCard(this, 0)" id="draft-0">
+                    <div class="card-inner">
+                        <div class="card-front-visual"></div> 
+                        <div class="card-back-visual"></div>
+                    </div>
                 </div>
-                <div class="draft-card" onclick="pickDraftCard('${data.options[1]}', 1)" id="draft-1">
-                    <div class="card-back"></div>
+
+                <div class="draft-card" data-cardid="${data.options[1]}" onclick="pickDraftCard(this, 1)" id="draft-1">
+                    <div class="card-inner">
+                        <div class="card-front-visual"></div>
+                        <div class="card-back-visual"></div>
+                    </div>
+                </div> <div class="draft-card" data-cardid="${data.options[2]}" onclick="pickDraftCard(this, 2)" id="draft-2">
+                    <div class="card-inner">
+                        <div class="card-front-visual"></div>
+                        <div class="card-back-visual"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2077,43 +2092,52 @@ socket.on('receiveDraft', (data) => {
 });
 
 // Funkcja wyboru karty
-window.pickDraftCard = function(cardId, index) {
-    const selectedCard = document.getElementById(`draft-${index}`);
-    const otherCard = document.getElementById(index === 0 ? 'draft-1' : 'draft-0');
+window.pickDraftCard = function(clickedElement, index) {
+    // 1. Pobieramy wszystkie karty draftu, jakie są aktualnie w overlayu
+    const allCards = document.querySelectorAll('.draft-card');
+    const selectedCardId = clickedElement.getAttribute('data-cardid');
 
-    // 1. Animacja: Druga karta znika
-    if (otherCard) {
-        otherCard.style.opacity = "0";
-        otherCard.style.transform = "scale(0.8)";
-        otherCard.style.pointerEvents = "none";
-    }
+    // 2. Blokujemy klikalność wszystkich kart natychmiast
+    allCards.forEach(card => card.style.pointerEvents = "none");
 
-    // 2. Animacja: Wybrana karta obraca się i pokazuje co to za karta
-    const cardBack = selectedCard.querySelector('.card-back');
-    
-    // Ustawiamy grafikę karty
-    cardBack.style.backgroundImage = `url('cards/${cardId}.png')`;
-    
-    // KLUCZOWE POPRAWKI:
-    // Obracamy całą kartę o 180 stopni w 3D
-    selectedCard.style.transform = "scale(1.1) rotateY(180deg)";
-    
-    // Obracamy samo tło o -180 stopni, aby zniwelować lustrzane odbicie
-    cardBack.style.transform = "rotateY(180deg)"; 
-    
-    selectedCard.style.filter = "brightness(1.2) drop-shadow(0 0 20px gold)";
+    // 3. Logika dla KAŻDEJ karty z osobna
+    allCards.forEach((card) => {
+        const cardIndex = parseInt(card.id.split('-')[1]); // Wyciąga cyfrę z id "draft-X"
+        const cardVisual = card.querySelector('.card-back-visual');
+        const cardId = card.getAttribute('data-cardid');
 
-    // 3. Po 2 sekundach informujemy serwer i zamykamy okno
+        // Ustawiamy obrazek tła dla każdej karty (musimy wiedzieć co pod każdą było)
+        cardVisual.style.backgroundImage = `url('cards/${cardId}.png')`;
+
+        if (card === clickedElement) {
+            // --- EFEKT DLA WYBRANEJ KARTY ---
+            card.classList.add('flipped');
+            card.style.filter = "brightness(1.1) drop-shadow(0 0 20px gold)";
+            card.style.zIndex = "100";
+            card.style.transform = "scale(1.1)"; // Lekkie powiększenie zwycięzcy
+        } else {
+            // --- EFEKT DLA NIEWYBRANYCH KART ("Haha!") ---
+            // Dodajemy małe, kaskadowe opóźnienie dla każdej kolejnej karty (0.2s, 0.4s itd.)
+            setTimeout(() => {
+                card.classList.add('flipped');
+                card.style.filter = "grayscale(0.5) brightness(0.8) blur(0.5px)";
+                card.style.opacity = "0.6";
+                // Niewybrane karty lekko się kurczą w środku
+                card.querySelector('.card-inner').style.transform = "rotateY(180deg) scale(0.85)";
+            }, 200 + (cardIndex * 100)); 
+        }
+    });
+
+    // 4. FINALIZACJA (wysłanie do serwera po czasie na obejrzenie)
     setTimeout(() => {
-        socket.emit('acceptDraftCard', cardId); // Wysyłamy ID wybranej karty
-        
+        socket.emit('acceptDraftCard', selectedCardId); 
         const overlay = document.getElementById('draft-overlay');
         if (overlay) {
             overlay.style.opacity = "0";
             overlay.style.transition = "opacity 0.5s ease";
             setTimeout(() => overlay.remove(), 500);
         }
-    }, 2000);
+    }, 4000); // Wydłużyłem do 4s, bo przy 3 kartach jest więcej do oglądania
 };
 
 //////////////////////////////////////////////////////
